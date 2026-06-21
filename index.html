@@ -616,12 +616,12 @@
       let daysToFriday = (5 - nz.weekday + 7) % 7;
 
       /*
-        If it is Saturday or Sunday, or Monday before 0800, we still show the
+        If it is Saturday or Sunday, or Monday before 1300, we still show the
         Friday that started the current event window.
       */
       if (nz.weekday === 6) daysToFriday = -1;
       if (nz.weekday === 0) daysToFriday = -2;
-      if (nz.weekday === 1 && nz.hour < 8) daysToFriday = -3;
+      if (nz.weekday === 1 && nz.hour < 13) daysToFriday = -3;
 
       const fridayId = addDaysToDateId(todayId, daysToFriday);
       const mondayId = addDaysToDateId(fridayId, 3);
@@ -641,7 +641,7 @@
       if (nz.weekday === 5 && nz.hour >= 17) return true;
       if (nz.weekday === 6) return true;
       if (nz.weekday === 0) return true;
-      if (nz.weekday === 1 && nz.hour < 8) return true;
+      if (nz.weekday === 1 && nz.hour < 13) return true;
 
       return false;
     }
@@ -655,7 +655,7 @@
       if (parts.weekday === 5 && parts.hour >= 17) return true;
       if (parts.weekday === 6) return true;
       if (parts.weekday === 0) return true;
-      if (parts.weekday === 1 && parts.hour < 8) return true;
+      if (parts.weekday === 1 && parts.hour < 13) return true;
 
       return false;
     }
