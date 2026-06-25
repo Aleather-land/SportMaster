@@ -668,6 +668,9 @@
       if (nz.weekday === 1 && nz.hour < 13) return true;
       return false;
     }
+    function predictionsAreRevealed() {
+      return isLockedNow();
+    }
 
     function isReadOnlyView() {
       return !viewingCurrentWeek();
@@ -1062,42 +1065,61 @@
     }
 
     function renderPredictionCell(event, player, locked, readOnly) {
-      const predictions = predictionsByEvent[event.id] || [];
-      const existing = predictions.find(item => item.playerId === player.id);
-      const isMe = currentUser && player.id === currentUser.uid;
-      const winnerClass = event.winnerPlayerId === player.id ? "score-pill" : "";
+     const predictions = predictionsByEvent[event.id] || [];
+     const existing = predictions.find(item => item.playerId === player.id);
+     const isMe = currentUser && player.id === currentUser.uid;
+     const winnerClass = event.winnerPlayerId === player.id ? "score-pill" : "";
+     const revealed = predictionsAreRevealed() || readOnly || Boolean(event.winnerPlayerId);
 
-      if (!isMe || readOnly) {
-        return `
-          <td>
-            <span class="${winnerClass}">
-              ${escapeHtml(existing ? existing.prediction : "")}
-            </span>
-          </td>
-        `;
-      }
+     if (!isMe) {
+       let displayValue = "";
 
-      return `
-        <td>
-          <div class="prediction-cell">
-            <input
-              data-event-id="${escapeAttr(event.id)}"
-              class="prediction-input"
-              value="${escapeAttr(existing ? existing.prediction : "")}" 
-              placeholder="Your prediction"
-              ${locked ? "disabled" : ""}
-            />
-            <button
-              class="small save-prediction-button"
-              data-event-id="${escapeAttr(event.id)}"
-              ${locked ? "disabled" : ""}
-            >
-              Save prediction
-            </button>
-          </div>
-        </td>
-      `;
-    }
+       if (existing) {
+         displayValue = revealed
+           ? existing.prediction
+           : "Prediction submitted";
+       }
+
+       return `
+         <td>
+           <span class="${winnerClass}">
+             ${escapeHtml(displayValue)}
+           </span>
+         </td>
+       `;
+     }
+
+     if (readOnly || revealed) {
+       return `
+         <td>
+           <span class="${winnerClass}">
+             ${escapeHtml(existing ? existing.prediction : "")}
+           </span>
+         </td>
+       `;
+     }
+
+     return `
+       <td>
+         <div class="prediction-cell">
+           <input
+             data-event-id="${escapeAttr(event.id)}"
+             class="prediction-input"
+             value="${escapeAttr(existing ? existing.prediction : "")}" 
+             placeholder="Your prediction"
+             ${locked ? "disabled" : ""}
+           />
+           <button
+             class="small save-prediction-button"
+             data-event-id="${escapeAttr(event.id)}"
+             ${locked ? "disabled" : ""}
+           >
+             Save prediction
+           </button>
+         </div>
+       </td>
+     `;
+   }
 
     function renderWinnerSelect(event, readOnly) {
       if (readOnly) return `<span class="muted">Pending</span>`;
@@ -1134,7 +1156,7 @@
       }
 
       return weeklyScores;
-    }
+     }
 
     function renderLeaderboard() {
       const weeklyScores = getThisWeekPointsByPlayer();
