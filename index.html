@@ -262,6 +262,14 @@
       min-width: 180px;
     }
 
+    .format-hint {
+      display: block;
+      margin-top: 0.35rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
     .score-pill {
       display: inline-block;
       background: #ecfdf5;
@@ -412,6 +420,12 @@
           <textarea id="challengeDescription" placeholder="Example: total goals scored, race winner, time of first goal..." required></textarea>
         </label>
 
+        <label>
+          Prediction format
+          <input id="predictionFormat" placeholder="Example: Team by 7, Player name, 3-1, 02:35, Horse name..." required />
+          <span class="format-hint">This appears in each player’s prediction box as the suggested format, helping everyone answer consistently while predictions remain hidden.</span>
+        </label>
+
         <button id="saveEventButton" type="submit">Save my event</button>
         <div id="eventMessage"></div>
       </form>
@@ -452,7 +466,7 @@
 
     <section id="scoreCard" class="card hidden">
       <h2>Leaderboard</h2>
-      <p class="muted">Total points are calculated across all saved weeks.</p>
+      <p class="muted">The week column shows points for the week currently selected above. Total points are calculated across all saved weeks.</p>
       <div id="leaderboard"></div>
     </section>
 
@@ -465,6 +479,7 @@
         <li>All events and predictions must be entered before 1700 New Zealand Time on Friday.</li>
         <li>No new entries, edits or predictions are allowed during the event window.</li>
         <li>Each challenge must have a clear result so that one winner can be chosen.</li>
+        <li>Each event owner must specify a prediction format so players know how to answer.</li>
         <li>Identical predictions are not allowed for the same event.</li>
         <li>The winner of each event category gets one point. Everyone else gets zero for that category.</li>
         <li>Players may withdraw from the weekly game if they choose.</li>
@@ -562,6 +577,7 @@
       eventLink: document.querySelector("#eventLink"),
       eventStartAt: document.querySelector("#eventStartAt"),
       challengeDescription: document.querySelector("#challengeDescription"),
+      predictionFormat: document.querySelector("#predictionFormat"),
       saveEventButton: document.querySelector("#saveEventButton"),
       eventMessage: document.querySelector("#eventMessage"),
 
@@ -980,7 +996,7 @@
       const myEvent = events.find(event => event.ownerPlayerId === currentUser.uid);
       const formHasFocus = els.eventForm.contains(document.activeElement);
       const formKey = myEvent
-        ? `${selectedWeekId}|${myEvent.id}|${myEvent.updatedAt?.seconds || ""}|${myEvent.eventName || ""}`
+        ? `${selectedWeekId}|${myEvent.id}|${myEvent.updatedAt?.seconds || ""}|${myEvent.eventName || ""}|${myEvent.predictionFormat || ""}`
         : `${selectedWeekId}|empty`;
 
       /*
@@ -1003,6 +1019,7 @@
       els.eventLink.value = myEvent.eventLink || "";
       els.eventStartAt.value = myEvent.eventStartAt || "";
       els.challengeDescription.value = myEvent.challengeDescription || "";
+      els.predictionFormat.value = myEvent.predictionFormat || "";
       eventFormLoadedKey = formKey;
     }
 
@@ -1048,6 +1065,13 @@
         <tr>
           <td>Challenge</td>
           ${events.map(event => `<td>${escapeHtml(event.challengeDescription || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Prediction format</td>
+          ${events.map(event => `<td>${escapeHtml(event.predictionFormat || "")}</td>`).join("")}
         </tr>
       `);
 
@@ -1120,9 +1144,10 @@
              data-event-id="${escapeAttr(event.id)}"
              class="prediction-input"
              value="${escapeAttr(existing ? existing.prediction : "")}" 
-             placeholder="Your prediction"
+             placeholder="${escapeAttr(event.predictionFormat || "Your prediction")}"
              ${locked ? "disabled" : ""}
            />
+           ${event.predictionFormat ? `<span class="format-hint">Format: ${escapeHtml(event.predictionFormat)}</span>` : ""}
            <button
              class="small save-prediction-button"
              data-event-id="${escapeAttr(event.id)}"
@@ -1159,29 +1184,33 @@
       `;
     }
 
-    function getThisWeekPointsByPlayer() {
-      const weeklyScores = new Map();
-      for (const player of players) weeklyScores.set(player.id, 0);
+    function getSelectedWeekPointsByPlayer() {
+      const selectedWeekScores = new Map();
+      for (const player of players) selectedWeekScores.set(player.id, 0);
 
-      if (viewingCurrentWeek()) {
-        for (const event of events) {
-          if (event.winnerPlayerId && weeklyScores.has(event.winnerPlayerId)) {
-            weeklyScores.set(event.winnerPlayerId, weeklyScores.get(event.winnerPlayerId) + 1);
-          }
+      for (const event of events) {
+        if (event.winnerPlayerId) {
+          selectedWeekScores.set(
+            event.winnerPlayerId,
+            (selectedWeekScores.get(event.winnerPlayerId) || 0) + 1
+          );
         }
       }
 
-      return weeklyScores;
-     }
+      return selectedWeekScores;
+    }
 
     function renderLeaderboard() {
-      const weeklyScores = getThisWeekPointsByPlayer();
+      const selectedWeekScores = getSelectedWeekPointsByPlayer();
+      const selectedWeekLabel = viewingCurrentWeek()
+        ? "Latest week"
+        : `Selected week ${selectedWeekId}`;
 
       const ordered = players
         .map(player => ({
           id: player.id,
           name: player.nickname || player.fullName || "Player",
-          weeklyPoints: Number(weeklyScores.get(player.id) || 0),
+          selectedWeekPoints: Number(selectedWeekScores.get(player.id) || 0),
           lifetimePoints: Number(allTimeScores.get(player.id) ?? player.lifetimePoints ?? 0)
         }))
         .sort((a, b) => b.lifetimePoints - a.lifetimePoints || a.name.localeCompare(b.name));
@@ -1197,7 +1226,7 @@
             <thead>
               <tr>
                 <th>Player</th>
-                <th>This week</th>
+                <th>${escapeHtml(selectedWeekLabel)}</th>
                 <th>Total points</th>
               </tr>
             </thead>
@@ -1205,7 +1234,7 @@
               ${ordered.map(row => `
                 <tr>
                   <td>${escapeHtml(row.name)}</td>
-                  <td>${row.weeklyPoints}</td>
+                  <td>${row.selectedWeekPoints}</td>
                   <td>${row.lifetimePoints}</td>
                 </tr>
               `).join("")}
@@ -1376,6 +1405,11 @@
         return;
       }
 
+      if (!els.predictionFormat.value.trim()) {
+        showMessage(els.eventMessage, "Please specify the prediction format.", "error");
+        return;
+      }
+
       try {
         await ensureWeekDocument();
         await setDoc(doc(db, "weeks", selectedWeekId, "events", currentUser.uid), {
@@ -1386,6 +1420,7 @@
           eventLink: els.eventLink.value.trim(),
           eventStartAt: els.eventStartAt.value,
           challengeDescription: els.challengeDescription.value.trim(),
+          predictionFormat: els.predictionFormat.value.trim(),
           updatedAt: serverTimestamp()
         }, { merge: true });
 
