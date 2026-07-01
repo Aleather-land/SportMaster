@@ -1,0 +1,1443 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sports Master - Weekly Sports Challenge</title>
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --brand: #1d4ed8;
+      --brand-dark: #153eaa;
+      --danger: #b91c1c;
+      --good: #047857;
+      --warn: #b45309;
+      --soft-blue: #eff6ff;
+      --shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    header {
+      background: #102a43;
+      color: white;
+      padding: 1.4rem 2rem;
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+      font-size: clamp(1.7rem, 3vw, 2.6rem);
+    }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.25rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .two {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      font-weight: 700;
+    }
+
+    input,
+    textarea,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input,
+    textarea,
+    select {
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      padding: 0.75rem;
+      width: 100%;
+      background: white;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      border-radius: 0.65rem;
+      padding: 0.75rem 1rem;
+      background: var(--brand);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--brand-dark);
+    }
+
+    button.secondary {
+      background: #475569;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button.small {
+      padding: 0.45rem 0.65rem;
+      font-size: 0.9rem;
+    }
+
+    button:disabled,
+    input:disabled,
+    textarea:disabled,
+    select:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      font-weight: 800;
+      background: var(--soft-blue);
+      color: #1e40af;
+    }
+
+    .status.locked {
+      background: #fff7ed;
+      color: var(--warn);
+    }
+
+    .status.complete {
+      background: #ecfdf5;
+      color: var(--good);
+    }
+
+    .notice {
+      border-left: 5px solid var(--brand);
+      padding: 0.8rem 1rem;
+      background: #f8fbff;
+      border-radius: 0.65rem;
+    }
+
+    .notice.warn {
+      border-color: var(--warn);
+      background: #fffbeb;
+    }
+
+    .notice.danger {
+      border-color: var(--danger);
+      background: #fef2f2;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .week-controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .week-controls label {
+      min-width: 230px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+    }
+
+    table {
+      width: 100%;
+      min-width: 980px;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 0.75rem;
+      vertical-align: top;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th {
+      background: var(--soft-blue);
+      text-align: left;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      background: #f8fafc;
+      font-weight: 800;
+      z-index: 2;
+      min-width: 170px;
+    }
+
+    th:first-child {
+      z-index: 3;
+      background: #dbeafe;
+    }
+
+    .prediction-cell {
+      display: grid;
+      gap: 0.5rem;
+      min-width: 180px;
+    }
+
+    .score-pill {
+      display: inline-block;
+      background: #ecfdf5;
+      color: var(--good);
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      font-weight: 800;
+    }
+
+    .error {
+      color: var(--danger);
+      font-weight: 800;
+    }
+
+    .success {
+      color: var(--good);
+      font-weight: 800;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .rules li {
+      margin-bottom: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>Sports Master - Weekly Sports Challenge</h1>
+        <div id="weekSummary">Loading...</div>
+      </div>
+
+      <div id="signedInActions" class="hidden">
+        <button id="signOutButton" class="secondary">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="authCard" class="card">
+      <h2>Register or sign in</h2>
+      <p class="muted">
+        Register once using your name, preferred name and email address. After that, sign in to play each week.
+      </p>
+
+      <div class="grid two">
+        <form id="registerForm" class="grid">
+          <h3>New player</h3>
+
+          <label>
+            Full name
+            <input id="registerFullName" autocomplete="name" required />
+          </label>
+
+          <label>
+            Preferred name or nickname
+            <input id="registerNickname" required />
+          </label>
+
+          <label>
+            Email address
+            <input id="registerEmail" type="email" autocomplete="email" required />
+          </label>
+
+          <label>
+            Password
+            <input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+
+          <button type="submit">Register</button>
+          <div id="registerMessage"></div>
+        </form>
+
+        <form id="signInForm" class="grid">
+          <h3>Returning player</h3>
+
+          <label>
+            Email address
+            <input id="signInEmail" type="email" autocomplete="email" required />
+          </label>
+
+          <label>
+            Password
+            <input id="signInPassword" type="password" autocomplete="current-password" required />
+          </label>
+
+          <button type="submit">Sign in</button>
+          <div id="signInMessage"></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="playerCard" class="card hidden">
+      <div class="toolbar">
+        <div>
+          <h2 id="welcomeTitle">Welcome</h2>
+          <p id="playerStatus" class="muted"></p>
+        </div>
+
+        <button id="withdrawButton" class="danger">Withdraw this week</button>
+      </div>
+    </section>
+
+    <section id="eventCard" class="card hidden">
+      <h2>Your event column</h2>
+      <p class="muted">
+        Choose one sporting event for the week. The event must start between Friday 1700 and Monday 0800 New Zealand Time.
+      </p>
+
+      <form id="eventForm" class="grid">
+        <div class="grid two">
+          <label>
+            Sport
+            <input id="sport" placeholder="Football, rugby, horse racing..." required />
+          </label>
+
+          <label>
+            Event
+            <input id="eventName" placeholder="Team A v Team B, Race 6..." required />
+          </label>
+        </div>
+
+        <div class="grid two">
+          <label>
+            Event link
+            <input id="eventLink" type="url" placeholder="https://..." required />
+          </label>
+
+          <label>
+            Event start time, New Zealand time
+            <input id="eventStartAt" type="datetime-local" required />
+          </label>
+        </div>
+
+        <label>
+          Challenge description
+          <textarea id="challengeDescription" placeholder="Example: total goals scored, race winner, time of first goal..." required></textarea>
+        </label>
+
+        <button id="saveEventButton" type="submit">Save my event</button>
+        <div id="eventMessage"></div>
+      </form>
+    </section>
+
+    <section id="gameCard" class="card hidden">
+      <div class="toolbar">
+        <div>
+          <h2>This week’s game</h2>
+          <p id="lockMessage" class="muted"></p>
+        </div>
+
+        <div class="week-controls">
+          <label>
+            View week
+            <select id="weekSelector"></select>
+          </label>
+          <button id="latestWeekButton" type="button" class="secondary">View latest week</button>
+          <span id="statusBadge" class="status">Open</span>
+        </div>
+      </div>
+
+      <div id="historyNotice" class="notice warn hidden">
+        You are viewing a previous week. Event entries and predictions are read-only, but event owners can still select missing winners.
+      </div>
+
+      <div id="emptyGameNotice" class="notice hidden">
+        No events have been added yet.
+      </div>
+
+      <div class="table-wrap">
+        <table id="gameTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="scoreCard" class="card hidden">
+      <h2>Leaderboard</h2>
+      <p class="muted">Total points are calculated across all saved weeks.</p>
+      <div id="leaderboard"></div>
+    </section>
+
+    <section class="card rules">
+      <h2>Rules</h2>
+      <ol>
+        <li>Players must register with their full name, preferred name or nickname, and email address.</li>
+        <li>Each active player may create one event column per week.</li>
+        <li>Events must occur between 1700 New Zealand Time on Friday and 0800 New Zealand Time on Monday.</li>
+        <li>All events and predictions must be entered before 1700 New Zealand Time on Friday.</li>
+        <li>No new entries, edits or predictions are allowed during the event window.</li>
+        <li>Each challenge must have a clear result so that one winner can be chosen.</li>
+        <li>Identical predictions are not allowed for the same event.</li>
+        <li>The winner of each event category gets one point. Everyone else gets zero for that category.</li>
+        <li>Players may withdraw from the weekly game if they choose.</li>
+        <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only, but event owners can still select missing winners.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    Sports Master - Weekly Sports Challenge
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      setDoc,
+      getDoc,
+      getDocs,
+      onSnapshot,
+      serverTimestamp,
+      runTransaction,
+      increment
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAawyNX4CCAe_IsU4ZJTar2npxFyqwHFrE",
+      authDomain: "sportmaster-d86e0.firebaseapp.com",
+      projectId: "sportmaster-d86e0",
+      storageBucket: "sportmaster-d86e0.firebasestorage.app",
+      messagingSenderId: "178820430750",
+      appId: "1:178820430750:web:93e8db4fc4623cc712b48f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const NZ_TIME_ZONE = "Pacific/Auckland";
+
+    let currentUser = null;
+    let currentPlayer = null;
+    let players = [];
+    let weeks = [];
+    let events = [];
+    let predictionsByEvent = {};
+    let allTimeScores = new Map();
+    let selectedWeekId = null;
+    let eventFormDirty = false;
+    let eventFormLoadedKey = null;
+    let unsubscribePlayers = null;
+    let unsubscribeWeeks = null;
+    let unsubscribeEvents = null;
+    let unsubscribePredictions = [];
+
+    const els = {
+      weekSummary: document.querySelector("#weekSummary"),
+      signedInActions: document.querySelector("#signedInActions"),
+      signOutButton: document.querySelector("#signOutButton"),
+
+      authCard: document.querySelector("#authCard"),
+      playerCard: document.querySelector("#playerCard"),
+      eventCard: document.querySelector("#eventCard"),
+      gameCard: document.querySelector("#gameCard"),
+      scoreCard: document.querySelector("#scoreCard"),
+
+      registerForm: document.querySelector("#registerForm"),
+      registerFullName: document.querySelector("#registerFullName"),
+      registerNickname: document.querySelector("#registerNickname"),
+      registerEmail: document.querySelector("#registerEmail"),
+      registerPassword: document.querySelector("#registerPassword"),
+      registerMessage: document.querySelector("#registerMessage"),
+
+      signInForm: document.querySelector("#signInForm"),
+      signInEmail: document.querySelector("#signInEmail"),
+      signInPassword: document.querySelector("#signInPassword"),
+      signInMessage: document.querySelector("#signInMessage"),
+
+      welcomeTitle: document.querySelector("#welcomeTitle"),
+      playerStatus: document.querySelector("#playerStatus"),
+      withdrawButton: document.querySelector("#withdrawButton"),
+
+      eventForm: document.querySelector("#eventForm"),
+      sport: document.querySelector("#sport"),
+      eventName: document.querySelector("#eventName"),
+      eventLink: document.querySelector("#eventLink"),
+      eventStartAt: document.querySelector("#eventStartAt"),
+      challengeDescription: document.querySelector("#challengeDescription"),
+      saveEventButton: document.querySelector("#saveEventButton"),
+      eventMessage: document.querySelector("#eventMessage"),
+
+      lockMessage: document.querySelector("#lockMessage"),
+      statusBadge: document.querySelector("#statusBadge"),
+      weekSelector: document.querySelector("#weekSelector"),
+      latestWeekButton: document.querySelector("#latestWeekButton"),
+      historyNotice: document.querySelector("#historyNotice"),
+      emptyGameNotice: document.querySelector("#emptyGameNotice"),
+      tableHead: document.querySelector("#tableHead"),
+      tableBody: document.querySelector("#tableBody"),
+      leaderboard: document.querySelector("#leaderboard")
+    };
+
+    function showMessage(element, message, type = "") {
+      element.textContent = message;
+      element.className = type;
+    }
+
+    function getNzParts(date = new Date()) {
+      const parts = new Intl.DateTimeFormat("en-NZ", {
+        timeZone: NZ_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).formatToParts(date);
+
+      const lookup = {};
+      for (const part of parts) lookup[part.type] = part.value;
+
+      const weekdayMap = {
+        Mon: 1,
+        Tue: 2,
+        Wed: 3,
+        Thu: 4,
+        Fri: 5,
+        Sat: 6,
+        Sun: 0
+      };
+
+      return {
+        year: Number(lookup.year),
+        month: Number(lookup.month),
+        day: Number(lookup.day),
+        weekday: weekdayMap[lookup.weekday],
+        hour: Number(lookup.hour),
+        minute: Number(lookup.minute)
+      };
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function dateId(year, month, day) {
+      return `${year}-${pad2(month)}-${pad2(day)}`;
+    }
+
+    function addDaysToDateId(dateString, days) {
+      const date = new Date(`${dateString}T12:00:00+12:00`);
+      date.setUTCDate(date.getUTCDate() + days);
+      const parts = getNzParts(date);
+      return dateId(parts.year, parts.month, parts.day);
+    }
+
+    function getCurrentWeekInfo() {
+      const nz = getNzParts();
+      const todayId = dateId(nz.year, nz.month, nz.day);
+      let daysToFriday = (5 - nz.weekday + 7) % 7;
+
+      if (nz.weekday === 6) daysToFriday = -1;
+      if (nz.weekday === 0) daysToFriday = -2;
+      if (nz.weekday === 1 && nz.hour < 13) daysToFriday = -3;
+
+      const fridayId = addDaysToDateId(todayId, daysToFriday);
+      const mondayId = addDaysToDateId(fridayId, 3);
+
+      return {
+        weekId: fridayId,
+        fridayId,
+        mondayId,
+        lockLabel: `${fridayId} 17:00 NZT`,
+        windowLabel: `${fridayId} 17:00 to ${mondayId} 08:00 NZT`
+      };
+    }
+
+    function currentWeekId() {
+      return getCurrentWeekInfo().weekId;
+    }
+
+    function viewingCurrentWeek() {
+      return selectedWeekId === currentWeekId();
+    }
+
+    function isLockedNow() {
+      const nz = getNzParts();
+      if (nz.weekday === 5 && nz.hour >= 17) return true;
+      if (nz.weekday === 6) return true;
+      if (nz.weekday === 0) return true;
+      if (nz.weekday === 1 && nz.hour < 13) return true;
+      return false;
+    }
+    function predictionsAreRevealed() {
+      return isLockedNow();
+    }
+
+    function isReadOnlyView() {
+      return !viewingCurrentWeek();
+    }
+
+    function selectedWeekIsBeforeCurrentWeek() {
+      return String(selectedWeekId || "") < String(currentWeekId());
+    }
+
+    function winnerSelectionIsOpen() {
+      if (!selectedWeekId) return false;
+
+      if (selectedWeekIsBeforeCurrentWeek()) return true;
+
+      return viewingCurrentWeek() && predictionsAreRevealed();
+    }
+
+    function isEventTimeInsideWindow(datetimeLocal) {
+      if (!datetimeLocal) return false;
+      const eventDate = new Date(datetimeLocal);
+      const parts = getNzParts(eventDate);
+      if (parts.weekday === 5 && parts.hour >= 17) return true;
+      if (parts.weekday === 6) return true;
+      if (parts.weekday === 0) return true;
+      if (parts.weekday === 1 && parts.hour < 13) return true;
+      return false;
+    }
+
+    function normalisePrediction(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function updateWeekDisplay() {
+      const info = getCurrentWeekInfo();
+      const locked = isLockedNow();
+      const readOnly = isReadOnlyView();
+
+      els.weekSummary.innerHTML = `
+        <span class="status ${locked ? "locked" : ""}">
+          ${locked ? "Locked" : "Open"}
+        </span>
+        <span> Current week: ${info.weekId}. Event window: ${info.windowLabel}.</span>
+      `;
+
+      els.lockMessage.textContent = readOnly
+        ? `Viewing week ${selectedWeekId}. Event entries and predictions are read-only. Missing winners can still be selected by the event owner.`
+        : locked
+          ? "Entries are locked. Winner selection is now open for event owners."
+          : `Entries are open until ${info.lockLabel}. Winner selection opens after Friday at 1700 New Zealand Time.`;
+
+      els.statusBadge.textContent = readOnly ? "Read-only" : locked ? "Locked" : "Open";
+      els.statusBadge.className = readOnly ? "status complete" : locked ? "status locked" : "status";
+      els.historyNotice.classList.toggle("hidden", !readOnly);
+      els.saveEventButton.disabled = locked || readOnly;
+    }
+
+    async function ensureWeekDocument() {
+      const info = getCurrentWeekInfo();
+      await setDoc(doc(db, "weeks", info.weekId), {
+        weekId: info.weekId,
+        lockLabel: info.lockLabel,
+        eventWindowLabel: info.windowLabel,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function loadCurrentPlayer(user) {
+      const snap = await getDoc(doc(db, "players", user.uid));
+      if (!snap.exists()) return null;
+      return { id: user.uid, ...snap.data() };
+    }
+
+    function startRealtimeListeners() {
+      stopRealtimeListeners();
+      selectedWeekId = selectedWeekId || currentWeekId();
+
+      unsubscribePlayers = onSnapshot(collection(db, "players"), snapshot => {
+        players = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => String(a.nickname || a.fullName).localeCompare(String(b.nickname || b.fullName)));
+        render();
+      });
+
+      unsubscribeWeeks = onSnapshot(collection(db, "weeks"), snapshot => {
+        const currentId = currentWeekId();
+        weeks = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => String(b.weekId || b.id).localeCompare(String(a.weekId || a.id)));
+
+        if (!weeks.some(week => (week.weekId || week.id) === currentId)) {
+          weeks.unshift({ id: currentId, weekId: currentId });
+        }
+
+        if (!selectedWeekId || !weeks.some(week => (week.weekId || week.id) === selectedWeekId)) {
+          selectedWeekId = currentId;
+          startEventsListener();
+        }
+
+        renderWeekSelector();
+        refreshAllTimeScores();
+        render();
+      });
+
+      startEventsListener();
+    }
+
+    function startEventsListener() {
+      if (!selectedWeekId) selectedWeekId = currentWeekId();
+      if (unsubscribeEvents) unsubscribeEvents();
+      for (const unsub of unsubscribePredictions) unsub();
+      unsubscribePredictions = [];
+      predictionsByEvent = {};
+
+      unsubscribeEvents = onSnapshot(collection(db, "weeks", selectedWeekId, "events"), snapshot => {
+        events = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => String(a.ownerNickname || "").localeCompare(String(b.ownerNickname || "")));
+        listenToPredictions();
+        render();
+      });
+    }
+
+    function listenToPredictions() {
+      for (const unsub of unsubscribePredictions) unsub();
+      unsubscribePredictions = [];
+      predictionsByEvent = {};
+
+      for (const event of events) {
+        const unsub = onSnapshot(
+          collection(db, "weeks", selectedWeekId, "events", event.id, "predictions"),
+          snapshot => {
+            predictionsByEvent[event.id] = snapshot.docs.map(d => ({
+              id: d.id,
+              ...d.data()
+            }));
+            render();
+          }
+        );
+        unsubscribePredictions.push(unsub);
+      }
+    }
+
+    function stopRealtimeListeners() {
+      if (unsubscribePlayers) unsubscribePlayers();
+      if (unsubscribeWeeks) unsubscribeWeeks();
+      if (unsubscribeEvents) unsubscribeEvents();
+      for (const unsub of unsubscribePredictions) unsub();
+
+      unsubscribePlayers = null;
+      unsubscribeWeeks = null;
+      unsubscribeEvents = null;
+      unsubscribePredictions = [];
+    }
+
+    async function refreshAllTimeScores() {
+      const totals = new Map();
+      for (const player of players) totals.set(player.id, 0);
+
+      const weekSnaps = await getDocs(collection(db, "weeks"));
+      for (const weekSnap of weekSnaps.docs) {
+        const eventSnaps = await getDocs(collection(db, "weeks", weekSnap.id, "events"));
+        for (const eventSnap of eventSnaps.docs) {
+          const event = eventSnap.data();
+          if (event.winnerPlayerId) {
+            totals.set(event.winnerPlayerId, (totals.get(event.winnerPlayerId) || 0) + 1);
+          }
+        }
+      }
+
+      allTimeScores = totals;
+      renderLeaderboard();
+    }
+
+    async function refreshWeekIfNeeded() {
+      const latestWeekId = currentWeekId();
+      await ensureWeekDocument();
+
+      if (!currentUser || !currentPlayer) {
+        updateWeekDisplay();
+        return;
+      }
+
+      if (viewingCurrentWeek() && selectedWeekId !== latestWeekId) {
+        selectedWeekId = latestWeekId;
+        startEventsListener();
+      }
+
+      renderWeekSelector();
+      updateWeekDisplay();
+    }
+
+    async function savePrediction(eventId, predictionValue) {
+      if (!currentUser || !currentPlayer) return;
+      if (isReadOnlyView()) throw new Error("Previous weeks are read-only.");
+      if (isLockedNow()) throw new Error("Entries are locked for this week.");
+
+      const clean = String(predictionValue || "").trim();
+      if (!clean) throw new Error("Please enter a prediction.");
+
+      const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
+      const predictionsRef = collection(eventRef, "predictions");
+      const myPredictionRef = doc(predictionsRef, currentUser.uid);
+
+      await runTransaction(db, async transaction => {
+        const predictionSnaps = await getDocs(predictionsRef);
+        const duplicate = predictionSnaps.docs.some(predictionDoc => {
+          if (predictionDoc.id === currentUser.uid) return false;
+          return normalisePrediction(predictionDoc.data().prediction) === normalisePrediction(clean);
+        });
+
+        if (duplicate) {
+          throw new Error("That prediction has already been used for this event. Please choose a different answer.");
+        }
+
+        transaction.set(myPredictionRef, {
+          playerId: currentUser.uid,
+          playerNickname: currentPlayer.nickname,
+          prediction: clean,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      });
+    }
+
+    async function markWinner(eventId, winnerPlayerId) {
+      if (!currentUser) return;
+      if (!winnerSelectionIsOpen()) {
+        throw new Error("Winner selection opens after Friday at 1700 New Zealand Time.");
+      }
+
+      const event = events.find(item => item.id === eventId);
+      if (!event || event.ownerPlayerId !== currentUser.uid) {
+        throw new Error("Only the player who created this event can mark the winner.");
+      }
+
+      const prediction = (predictionsByEvent[eventId] || []).find(item => item.playerId === winnerPlayerId);
+      if (!prediction) throw new Error("Winner prediction was not found.");
+
+      const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
+      const playerRef = doc(db, "players", winnerPlayerId);
+
+      await runTransaction(db, async transaction => {
+        const eventSnap = await transaction.get(eventRef);
+        if (!eventSnap.exists()) throw new Error("Event was not found.");
+        if (eventSnap.data().winnerPlayerId) throw new Error("A winner has already been recorded for this event.");
+
+        transaction.set(eventRef, {
+          winnerPlayerId,
+          winningPrediction: prediction.prediction,
+          completedAt: serverTimestamp()
+        }, { merge: true });
+
+        transaction.set(playerRef, {
+          lifetimePoints: increment(1),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      });
+
+      await refreshAllTimeScores();
+    }
+
+    function render() {
+      updateWeekDisplay();
+
+      if (!currentUser || !currentPlayer) return;
+
+      els.welcomeTitle.textContent = `Welcome, ${currentPlayer.nickname || currentPlayer.fullName}`;
+      els.playerStatus.textContent = currentPlayer.active === false
+        ? "You are currently withdrawn."
+        : "You are active for the weekly challenge.";
+
+      els.withdrawButton.textContent = currentPlayer.active === false
+        ? "Rejoin this week"
+        : "Withdraw this week";
+
+      const locked = isLockedNow();
+      const readOnly = isReadOnlyView();
+
+      els.eventCard.classList.toggle("hidden", currentPlayer.active === false || readOnly);
+      els.gameCard.classList.remove("hidden");
+      els.scoreCard.classList.remove("hidden");
+      els.withdrawButton.disabled = readOnly;
+
+      renderWeekSelector();
+      renderEventForm();
+      renderTable(locked, readOnly);
+      renderLeaderboard();
+    }
+
+    function renderWeekSelector() {
+      if (!els.weekSelector) return;
+      const currentId = currentWeekId();
+      const seen = new Set();
+      const options = [];
+
+      for (const week of [{ id: currentId, weekId: currentId }, ...weeks]) {
+        const id = week.weekId || week.id;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        const label = id === currentId ? `${id} (latest week)` : id;
+        options.push(`<option value="${escapeAttr(id)}" ${id === selectedWeekId ? "selected" : ""}>${escapeHtml(label)}</option>`);
+      }
+
+      els.weekSelector.innerHTML = options.join("");
+    }
+
+    function renderEventForm() {
+      const myEvent = events.find(event => event.ownerPlayerId === currentUser.uid);
+      const formHasFocus = els.eventForm.contains(document.activeElement);
+      const formKey = myEvent
+        ? `${selectedWeekId}|${myEvent.id}|${myEvent.updatedAt?.seconds || ""}|${myEvent.eventName || ""}`
+        : `${selectedWeekId}|empty`;
+
+      /*
+        Do not reset the form while the player is typing. Realtime Firestore
+        snapshots can call render() repeatedly, and resetting here would wipe
+        an in-progress event before it has been saved.
+      */
+      if (eventFormDirty || formHasFocus) return;
+
+      if (eventFormLoadedKey === formKey) return;
+
+      if (!myEvent) {
+        els.eventForm.reset();
+        eventFormLoadedKey = formKey;
+        return;
+      }
+
+      els.sport.value = myEvent.sport || "";
+      els.eventName.value = myEvent.eventName || "";
+      els.eventLink.value = myEvent.eventLink || "";
+      els.eventStartAt.value = myEvent.eventStartAt || "";
+      els.challengeDescription.value = myEvent.challengeDescription || "";
+      eventFormLoadedKey = formKey;
+    }
+
+    function renderTable(locked, readOnly) {
+      els.emptyGameNotice.classList.toggle("hidden", events.length > 0);
+      const visiblePlayers = readOnly ? players : players.filter(player => player.active !== false);
+
+      els.tableHead.innerHTML = `
+        <tr>
+          <th>Field</th>
+          ${events.map(event => `<th>${escapeHtml(event.ownerNickname || "Player")}</th>`).join("")}
+        </tr>
+      `;
+
+      const rows = [];
+
+      rows.push(`
+        <tr>
+          <td>Sport</td>
+          ${events.map(event => `<td>${escapeHtml(event.sport || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Event</td>
+          ${events.map(event => `<td>${escapeHtml(event.eventName || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Link</td>
+          ${events.map(event => `
+            <td>
+              ${event.eventLink ? `<a href="${escapeAttr(event.eventLink)}" target="_blank" rel="noopener">Open event</a>` : ""}
+            </td>
+          `).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Challenge</td>
+          ${events.map(event => `<td>${escapeHtml(event.challengeDescription || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Winner</td>
+          ${events.map(event => `
+            <td>
+              ${event.winnerPlayerId
+                ? `<span class="score-pill">${escapeHtml(getPlayerName(event.winnerPlayerId))}: ${escapeHtml(event.winningPrediction || "")}</span>`
+                : renderWinnerSelect(event, readOnly)}
+            </td>
+          `).join("")}
+        </tr>
+      `);
+
+      for (const player of visiblePlayers) {
+        rows.push(`
+          <tr>
+            <td>${escapeHtml(player.nickname || player.fullName || "Player")}</td>
+            ${events.map(event => renderPredictionCell(event, player, locked, readOnly)).join("")}
+          </tr>
+        `);
+      }
+
+      els.tableBody.innerHTML = rows.join("");
+      attachPredictionHandlers();
+      attachWinnerHandlers();
+    }
+
+    function renderPredictionCell(event, player, locked, readOnly) {
+     const predictions = predictionsByEvent[event.id] || [];
+     const existing = predictions.find(item => item.playerId === player.id);
+     const isMe = currentUser && player.id === currentUser.uid;
+     const winnerClass = event.winnerPlayerId === player.id ? "score-pill" : "";
+     const revealed = predictionsAreRevealed() || readOnly || Boolean(event.winnerPlayerId);
+
+     if (!isMe) {
+       let displayValue = "";
+
+       if (existing) {
+         displayValue = revealed
+           ? existing.prediction
+           : "Prediction submitted";
+       }
+
+       return `
+         <td>
+           <span class="${winnerClass}">
+             ${escapeHtml(displayValue)}
+           </span>
+         </td>
+       `;
+     }
+
+     if (readOnly || revealed) {
+       return `
+         <td>
+           <span class="${winnerClass}">
+             ${escapeHtml(existing ? existing.prediction : "")}
+           </span>
+         </td>
+       `;
+     }
+
+     return `
+       <td>
+         <div class="prediction-cell">
+           <input
+             data-event-id="${escapeAttr(event.id)}"
+             class="prediction-input"
+             value="${escapeAttr(existing ? existing.prediction : "")}" 
+             placeholder="Your prediction"
+             ${locked ? "disabled" : ""}
+           />
+           <button
+             class="small save-prediction-button"
+             data-event-id="${escapeAttr(event.id)}"
+             ${locked ? "disabled" : ""}
+           >
+             Save prediction
+           </button>
+         </div>
+       </td>
+     `;
+   }
+
+    function renderWinnerSelect(event, readOnly) {
+      if (!currentUser || event.ownerPlayerId !== currentUser.uid) {
+        return `<span class="muted">Pending</span>`;
+      }
+
+      if (!winnerSelectionIsOpen()) {
+        return `<span class="muted">Winner selection opens after Friday 1700 NZT</span>`;
+      }
+
+      const predictions = predictionsByEvent[event.id] || [];
+      if (predictions.length === 0) return `<span class="muted">No predictions yet</span>`;
+
+      return `
+        <select class="winner-select" data-event-id="${escapeAttr(event.id)}">
+          <option value="">Choose winner...</option>
+          ${predictions.map(prediction => `
+            <option value="${escapeAttr(prediction.playerId)}">
+              ${escapeHtml(prediction.playerNickname || getPlayerName(prediction.playerId))}: ${escapeHtml(prediction.prediction)}
+            </option>
+          `).join("")}
+        </select>
+      `;
+    }
+
+    function getThisWeekPointsByPlayer() {
+      const weeklyScores = new Map();
+      for (const player of players) weeklyScores.set(player.id, 0);
+
+      if (viewingCurrentWeek()) {
+        for (const event of events) {
+          if (event.winnerPlayerId && weeklyScores.has(event.winnerPlayerId)) {
+            weeklyScores.set(event.winnerPlayerId, weeklyScores.get(event.winnerPlayerId) + 1);
+          }
+        }
+      }
+
+      return weeklyScores;
+     }
+
+    function renderLeaderboard() {
+      const weeklyScores = getThisWeekPointsByPlayer();
+
+      const ordered = players
+        .map(player => ({
+          id: player.id,
+          name: player.nickname || player.fullName || "Player",
+          weeklyPoints: Number(weeklyScores.get(player.id) || 0),
+          lifetimePoints: Number(allTimeScores.get(player.id) ?? player.lifetimePoints ?? 0)
+        }))
+        .sort((a, b) => b.lifetimePoints - a.lifetimePoints || a.name.localeCompare(b.name));
+
+      if (ordered.length === 0) {
+        els.leaderboard.innerHTML = `<p class="muted">No players yet.</p>`;
+        return;
+      }
+
+      els.leaderboard.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>This week</th>
+                <th>Total points</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordered.map(row => `
+                <tr>
+                  <td>${escapeHtml(row.name)}</td>
+                  <td>${row.weeklyPoints}</td>
+                  <td>${row.lifetimePoints}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function attachPredictionHandlers() {
+      document.querySelectorAll(".save-prediction-button").forEach(button => {
+        button.addEventListener("click", async () => {
+          const eventId = button.dataset.eventId;
+          const input = document.querySelector(`.prediction-input[data-event-id="${cssEscape(eventId)}"]`);
+
+          try {
+            button.disabled = true;
+            await savePrediction(eventId, input.value);
+          } catch (error) {
+            alert(error.message);
+          } finally {
+            button.disabled = isLockedNow() || isReadOnlyView();
+          }
+        });
+      });
+    }
+
+    function attachWinnerHandlers() {
+      document.querySelectorAll(".winner-select").forEach(select => {
+        select.addEventListener("change", async () => {
+          if (!select.value) return;
+
+          try {
+            await markWinner(select.dataset.eventId, select.value);
+          } catch (error) {
+            alert(error.message);
+          }
+        });
+      });
+    }
+
+    function getPlayerName(playerId) {
+      const player = players.find(item => item.id === playerId);
+      return player ? player.nickname || player.fullName || "Player" : "Player";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+
+    function cssEscape(value) {
+      if (window.CSS && CSS.escape) return CSS.escape(value);
+      return String(value).replace(/"/g, '\\"');
+    }
+
+    els.registerForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      showMessage(els.registerMessage, "");
+
+      try {
+        const credential = await createUserWithEmailAndPassword(
+          auth,
+          els.registerEmail.value.trim(),
+          els.registerPassword.value
+        );
+
+        await setDoc(doc(db, "players", credential.user.uid), {
+          fullName: els.registerFullName.value.trim(),
+          nickname: els.registerNickname.value.trim(),
+          email: els.registerEmail.value.trim().toLowerCase(),
+          active: true,
+          lifetimePoints: 0,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        showMessage(els.registerMessage, "Registered successfully.", "success");
+      } catch (error) {
+        showMessage(els.registerMessage, error.message, "error");
+      }
+    });
+
+    els.signInForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      showMessage(els.signInMessage, "");
+
+      try {
+        await signInWithEmailAndPassword(
+          auth,
+          els.signInEmail.value.trim(),
+          els.signInPassword.value
+        );
+      } catch (error) {
+        showMessage(els.signInMessage, error.message, "error");
+      }
+    });
+
+    els.signOutButton.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    els.withdrawButton.addEventListener("click", async () => {
+      if (!currentUser || !currentPlayer || isReadOnlyView()) return;
+
+      const newActiveState = currentPlayer.active === false;
+      await setDoc(doc(db, "players", currentUser.uid), {
+        active: newActiveState,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      currentPlayer.active = newActiveState;
+      render();
+    });
+
+    els.eventForm.addEventListener("input", () => {
+      eventFormDirty = true;
+    });
+
+    els.weekSelector.addEventListener("change", () => {
+      selectedWeekId = els.weekSelector.value;
+      eventFormDirty = false;
+      eventFormLoadedKey = null;
+      startEventsListener();
+      render();
+    });
+
+    els.latestWeekButton.addEventListener("click", async () => {
+      selectedWeekId = currentWeekId();
+      eventFormDirty = false;
+      eventFormLoadedKey = null;
+      await ensureWeekDocument();
+      startEventsListener();
+      renderWeekSelector();
+      render();
+    });
+
+    els.eventForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      showMessage(els.eventMessage, "");
+
+      if (!currentUser || !currentPlayer) return;
+
+      if (isReadOnlyView()) {
+        showMessage(els.eventMessage, "Previous weeks are read-only.", "error");
+        return;
+      }
+
+      if (isLockedNow()) {
+        showMessage(els.eventMessage, "Entries are locked for this week.", "error");
+        return;
+      }
+
+      if (!isEventTimeInsideWindow(els.eventStartAt.value)) {
+        showMessage(
+          els.eventMessage,
+          "The event must start between Friday 1700 and Monday 0800 New Zealand Time.",
+          "error"
+        );
+        return;
+      }
+
+      try {
+        await ensureWeekDocument();
+        await setDoc(doc(db, "weeks", selectedWeekId, "events", currentUser.uid), {
+          ownerPlayerId: currentUser.uid,
+          ownerNickname: currentPlayer.nickname || currentPlayer.fullName,
+          sport: els.sport.value.trim(),
+          eventName: els.eventName.value.trim(),
+          eventLink: els.eventLink.value.trim(),
+          eventStartAt: els.eventStartAt.value,
+          challengeDescription: els.challengeDescription.value.trim(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        eventFormDirty = false;
+        eventFormLoadedKey = null;
+        showMessage(els.eventMessage, "Event saved.", "success");
+      } catch (error) {
+        showMessage(els.eventMessage, error.message, "error");
+      }
+    });
+
+    onAuthStateChanged(auth, async user => {
+      currentUser = user;
+      currentPlayer = null;
+      stopRealtimeListeners();
+
+      if (!user) {
+        els.authCard.classList.remove("hidden");
+        els.playerCard.classList.add("hidden");
+        els.eventCard.classList.add("hidden");
+        els.gameCard.classList.add("hidden");
+        els.scoreCard.classList.add("hidden");
+        els.signedInActions.classList.add("hidden");
+        selectedWeekId = currentWeekId();
+        updateWeekDisplay();
+        return;
+      }
+
+      await ensureWeekDocument();
+      selectedWeekId = currentWeekId();
+      currentPlayer = await loadCurrentPlayer(user);
+
+      if (!currentPlayer) {
+        alert("Signed in, but no player profile was found.");
+        await signOut(auth);
+        return;
+      }
+
+      els.authCard.classList.add("hidden");
+      els.playerCard.classList.remove("hidden");
+      els.eventCard.classList.remove("hidden");
+      els.gameCard.classList.remove("hidden");
+      els.scoreCard.classList.remove("hidden");
+      els.signedInActions.classList.remove("hidden");
+
+      startRealtimeListeners();
+      render();
+    });
+
+    selectedWeekId = currentWeekId();
+    updateWeekDisplay();
+    setInterval(refreshWeekIfNeeded, 30000);
+  </script>
+</body>
+</html>
