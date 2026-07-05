@@ -270,6 +270,12 @@
       line-height: 1.35;
     }
 
+    .result-cell {
+      display: grid;
+      gap: 0.5rem;
+      min-width: 190px;
+    }
+
     .score-pill {
       display: inline-block;
       background: #ecfdf5;
@@ -449,7 +455,7 @@
       </div>
 
       <div id="historyNotice" class="notice warn hidden">
-        You are viewing a previous week. Event entries and predictions are read-only, but event owners can still select missing winners.
+        You are viewing a previous week. Event entries and predictions are read-only, but event owners can still select missing winners and add actual results.
       </div>
 
       <div id="emptyGameNotice" class="notice hidden">
@@ -479,11 +485,12 @@
         <li>All events and predictions must be entered before 1700 New Zealand Time on Friday.</li>
         <li>No new entries, edits or predictions are allowed during the event window.</li>
         <li>Each challenge must have a clear result so that one winner can be chosen.</li>
+        <li>After Friday 1700 New Zealand Time, event owners can record the actual result and select the winning prediction.</li>
         <li>Each event owner must specify a prediction format so players know how to answer.</li>
         <li>Identical predictions are not allowed for the same event.</li>
         <li>The winner of each event category gets one point. Everyone else gets zero for that category.</li>
         <li>Players may withdraw from the weekly game if they choose.</li>
-        <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only, but event owners can still select missing winners.</li>
+        <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only, but event owners can still select missing winners and add actual results.</li>
       </ol>
     </section>
   </main>
@@ -510,8 +517,7 @@
       getDocs,
       onSnapshot,
       serverTimestamp,
-      runTransaction,
-      increment
+      runTransaction
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -732,10 +738,10 @@
       `;
 
       els.lockMessage.textContent = readOnly
-        ? `Viewing week ${selectedWeekId}. Event entries and predictions are read-only. Missing winners can still be selected by the event owner.`
+        ? `Viewing week ${selectedWeekId}. Event entries and predictions are read-only. Missing winners and actual results can still be saved by the event owner.`
         : locked
-          ? "Entries are locked. Winner selection is now open for event owners."
-          : `Entries are open until ${info.lockLabel}. Winner selection opens after Friday at 1700 New Zealand Time.`;
+          ? "Entries are locked. Winner selection and actual result entry are now open for event owners."
+          : `Entries are open until ${info.lockLabel}. Winner selection and actual result entry open after Friday at 1700 New Zealand Time.`;
 
       els.statusBadge.textContent = readOnly ? "Read-only" : locked ? "Locked" : "Open";
       els.statusBadge.className = readOnly ? "status complete" : locked ? "status locked" : "status";
@@ -925,8 +931,19 @@
       if (!prediction) throw new Error("Winner prediction was not found.");
 
       const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
-      const playerRef = doc(db, "players", winnerPlayerId);
 
+      /*
+        Important permission fix:
+        Do not update players/{winnerPlayerId} here.
+
+        Normal players usually only have permission to edit their own player document.
+        The old version tried to increment lifetimePoints on the winner's player document.
+        That meant selecting yourself worked, but selecting another player could fail with
+        "insufficient permissions".
+
+        The leaderboard already calculates totals from the completed event documents,
+        so writing the winner to the event document is enough.
+      */
       await runTransaction(db, async transaction => {
         const eventSnap = await transaction.get(eventRef);
         if (!eventSnap.exists()) throw new Error("Event was not found.");
@@ -937,14 +954,29 @@
           winningPrediction: prediction.prediction,
           completedAt: serverTimestamp()
         }, { merge: true });
-
-        transaction.set(playerRef, {
-          lifetimePoints: increment(1),
-          updatedAt: serverTimestamp()
-        }, { merge: true });
       });
 
       await refreshAllTimeScores();
+    }
+
+    async function saveActualResult(eventId, actualResultValue) {
+      if (!currentUser) return;
+      if (!winnerSelectionIsOpen()) {
+        throw new Error("Actual result entry opens after Friday at 1700 New Zealand Time.");
+      }
+
+      const event = events.find(item => item.id === eventId);
+      if (!event || event.ownerPlayerId !== currentUser.uid) {
+        throw new Error("Only the player who created this event can save the actual result.");
+      }
+
+      const cleanResult = String(actualResultValue || "").trim();
+      if (!cleanResult) throw new Error("Please enter the actual result.");
+
+      await setDoc(doc(db, "weeks", selectedWeekId, "events", eventId), {
+        actualResult: cleanResult,
+        resultUpdatedAt: serverTimestamp()
+      }, { merge: true });
     }
 
     function render() {
@@ -1077,6 +1109,13 @@
 
       rows.push(`
         <tr>
+          <td>Actual result</td>
+          ${events.map(event => renderActualResultCell(event)).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
           <td>Winner</td>
           ${events.map(event => `
             <td>
@@ -1100,6 +1139,7 @@
       els.tableBody.innerHTML = rows.join("");
       attachPredictionHandlers();
       attachWinnerHandlers();
+      attachResultHandlers();
     }
 
     function renderPredictionCell(event, player, locked, readOnly) {
@@ -1159,6 +1199,37 @@
        </td>
      `;
    }
+
+    function renderActualResultCell(event) {
+      const canEditResult =
+        currentUser &&
+        event.ownerPlayerId === currentUser.uid &&
+        winnerSelectionIsOpen();
+
+      if (!canEditResult) {
+        return `<td>${event.actualResult ? escapeHtml(event.actualResult) : `<span class="muted">Pending</span>`}</td>`;
+      }
+
+      return `
+        <td>
+          <div class="result-cell">
+            <input
+              class="actual-result-input"
+              data-event-id="${escapeAttr(event.id)}"
+              value="${escapeAttr(event.actualResult || "")}"
+              placeholder="Actual result, e.g. Hurricanes 20, Chiefs 12"
+            />
+            <button
+              class="small save-result-button"
+              data-event-id="${escapeAttr(event.id)}"
+              type="button"
+            >
+              Save actual result
+            </button>
+          </div>
+        </td>
+      `;
+    }
 
     function renderWinnerSelect(event, readOnly) {
       if (!currentUser || event.ownerPlayerId !== currentUser.uid) {
@@ -1257,6 +1328,24 @@
             alert(error.message);
           } finally {
             button.disabled = isLockedNow() || isReadOnlyView();
+          }
+        });
+      });
+    }
+
+    function attachResultHandlers() {
+      document.querySelectorAll(".save-result-button").forEach(button => {
+        button.addEventListener("click", async () => {
+          const eventId = button.dataset.eventId;
+          const input = document.querySelector(`.actual-result-input[data-event-id="${cssEscape(eventId)}"]`);
+
+          try {
+            button.disabled = true;
+            await saveActualResult(eventId, input.value);
+          } catch (error) {
+            alert(error.message);
+          } finally {
+            button.disabled = false;
           }
         });
       });
