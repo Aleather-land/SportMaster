@@ -1,0 +1,2421 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sports Master - Weekly Sports Challenge</title>
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --brand: #1d4ed8;
+      --brand-dark: #153eaa;
+      --danger: #b91c1c;
+      --good: #047857;
+      --warn: #b45309;
+      --soft-blue: #eff6ff;
+      --shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    header {
+      background: #102a43;
+      color: white;
+      padding: 1.4rem 2rem;
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+      font-size: clamp(1.7rem, 3vw, 2.6rem);
+    }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.25rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .two {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      font-weight: 700;
+    }
+
+    input,
+    textarea,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input,
+    textarea,
+    select {
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      padding: 0.75rem;
+      width: 100%;
+      background: white;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      border-radius: 0.65rem;
+      padding: 0.75rem 1rem;
+      background: var(--brand);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--brand-dark);
+    }
+
+    button.secondary {
+      background: #475569;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button.small {
+      padding: 0.45rem 0.65rem;
+      font-size: 0.9rem;
+    }
+
+    button:disabled,
+    input:disabled,
+    textarea:disabled,
+    select:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      font-weight: 800;
+      background: var(--soft-blue);
+      color: #1e40af;
+    }
+
+    .status.locked {
+      background: #fff7ed;
+      color: var(--warn);
+    }
+
+    .status.complete {
+      background: #ecfdf5;
+      color: var(--good);
+    }
+
+    .notice {
+      border-left: 5px solid var(--brand);
+      padding: 0.8rem 1rem;
+      background: #f8fbff;
+      border-radius: 0.65rem;
+    }
+
+    .notice.warn {
+      border-color: var(--warn);
+      background: #fffbeb;
+    }
+
+    .notice.danger {
+      border-color: var(--danger);
+      background: #fef2f2;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .week-controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .week-controls label {
+      min-width: 230px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+    }
+
+    table {
+      width: 100%;
+      min-width: 980px;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 0.75rem;
+      vertical-align: top;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th {
+      background: var(--soft-blue);
+      text-align: left;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      background: #f8fafc;
+      font-weight: 800;
+      z-index: 2;
+      min-width: 170px;
+    }
+
+    th:first-child {
+      z-index: 3;
+      background: #dbeafe;
+    }
+
+    .prediction-cell {
+      display: grid;
+      gap: 0.5rem;
+      min-width: 180px;
+    }
+
+    .format-hint {
+      display: block;
+      margin-top: 0.35rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+
+    .save-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .save-status.saved {
+      color: var(--good);
+    }
+
+    .save-status.unsaved {
+      color: var(--warn);
+    }
+
+    .save-status.empty {
+      color: var(--muted);
+    }
+
+    .tie-break-options {
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      padding: 1rem;
+      background: #f8fafc;
+    }
+
+    .mini-game-panel {
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .mini-game-target {
+      font-size: 1.25rem;
+      font-weight: 900;
+    }
+
+    .mini-game-result {
+      font-weight: 800;
+    }
+
+    .result-cell {
+      display: grid;
+      gap: 0.5rem;
+      min-width: 190px;
+    }
+
+    .score-pill {
+      display: inline-block;
+      background: #ecfdf5;
+      color: var(--good);
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      font-weight: 800;
+    }
+
+    .error {
+      color: var(--danger);
+      font-weight: 800;
+    }
+
+    .success {
+      color: var(--good);
+      font-weight: 800;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .rules li {
+      margin-bottom: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem;
+    }
+
+
+    /* Sports Master pro sports theme overrides */
+    :root {
+      --bg: #07111f;
+      --panel: rgba(12, 27, 48, 0.92);
+      --ink: #eaf2ff;
+      --muted: #9fb4cf;
+      --line: rgba(148, 163, 184, 0.24);
+      --brand: #facc15;
+      --brand-dark: #eab308;
+      --danger: #ef4444;
+      --good: #22c55e;
+      --warn: #fb923c;
+      --soft-blue: rgba(30, 64, 175, 0.28);
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+      --pitch: rgba(34, 197, 94, 0.08);
+      --panel-light: rgba(15, 38, 68, 0.96);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(250, 204, 21, 0.16), transparent 32rem),
+        radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 30rem),
+        linear-gradient(135deg, #06111f 0%, #091827 44%, #07111f 100%);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.14;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.09) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+
+    header {
+      background:
+        linear-gradient(135deg, rgba(5, 12, 24, 0.98), rgba(11, 34, 57, 0.98)),
+        repeating-linear-gradient(90deg, transparent 0 42px, rgba(255,255,255,0.04) 42px 44px);
+      border-bottom: 3px solid rgba(250, 204, 21, 0.8);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .header-inner {
+      position: relative;
+    }
+
+    .header-inner::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1.4rem;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--brand), transparent);
+      opacity: 0.8;
+    }
+
+    h1 {
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 18px rgba(250, 204, 21, 0.22);
+    }
+
+    h2 {
+      letter-spacing: -0.02em;
+    }
+
+    main {
+      position: relative;
+    }
+
+    .card {
+      background:
+        linear-gradient(180deg, rgba(18, 43, 75, 0.96), rgba(9, 22, 39, 0.96)),
+        linear-gradient(90deg, transparent, rgba(250, 204, 21, 0.06), transparent);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .card > h2:first-child,
+    .toolbar h2 {
+      color: #f8fafc;
+    }
+
+    .toolbar {
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    input,
+    textarea,
+    select {
+      background: rgba(2, 6, 23, 0.68);
+      border-color: rgba(148, 163, 184, 0.32);
+      color: #f8fafc;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: rgba(203, 213, 225, 0.58);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: 2px solid rgba(250, 204, 21, 0.42);
+      border-color: rgba(250, 204, 21, 0.75);
+      box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.12);
+    }
+
+    button {
+      background: linear-gradient(135deg, #facc15, #f97316);
+      color: #111827;
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.22);
+      border: 1px solid rgba(254, 240, 138, 0.5);
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #fde047, #fb923c);
+      transform: translateY(-1px);
+    }
+
+    button.secondary {
+      background: linear-gradient(135deg, #1e3a8a, #0f172a);
+      color: #eaf2ff;
+      border-color: rgba(147, 197, 253, 0.35);
+      box-shadow: none;
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #ef4444, #991b1b);
+      color: #fff;
+      border-color: rgba(248, 113, 113, 0.5);
+    }
+
+    .status {
+      background: rgba(250, 204, 21, 0.14);
+      border: 1px solid rgba(250, 204, 21, 0.45);
+      color: #fde68a;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status.locked {
+      background: rgba(251, 146, 60, 0.16);
+      border-color: rgba(251, 146, 60, 0.5);
+      color: #fed7aa;
+    }
+
+    .status.complete {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    .notice {
+      background: rgba(15, 23, 42, 0.72);
+      border-left-color: var(--brand);
+      color: #dbeafe;
+    }
+
+    .notice.warn {
+      background: rgba(120, 53, 15, 0.30);
+    }
+
+    .table-wrap {
+      border-color: rgba(148, 163, 184, 0.26);
+      background: rgba(2, 6, 23, 0.36);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    table {
+      background: transparent;
+    }
+
+    th,
+    td {
+      border-color: rgba(148, 163, 184, 0.22);
+    }
+
+    th {
+      background: linear-gradient(180deg, rgba(30, 64, 175, 0.72), rgba(15, 23, 42, 0.82));
+      color: #fef9c3;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.84rem;
+    }
+
+    td {
+      background: rgba(15, 23, 42, 0.36);
+      color: #e2e8f0;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: rgba(30, 41, 59, 0.34);
+    }
+
+    th:first-child,
+    td:first-child {
+      background: linear-gradient(180deg, rgba(8, 47, 73, 0.94), rgba(15, 23, 42, 0.94));
+      color: #fef3c7;
+    }
+
+    th:first-child {
+      background: linear-gradient(180deg, rgba(250, 204, 21, 0.26), rgba(15, 23, 42, 0.94));
+    }
+
+    a {
+      color: #7dd3fc;
+      font-weight: 800;
+    }
+
+    .score-pill {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(20, 184, 166, 0.16));
+      color: #bbf7d0;
+      border: 1px solid rgba(34, 197, 94, 0.42);
+      box-shadow: 0 0 18px rgba(34, 197, 94, 0.12);
+    }
+
+    .tie-break-options {
+      background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.84), rgba(12, 74, 110, 0.28));
+      border-color: rgba(250, 204, 21, 0.22);
+    }
+
+    .mini-game-panel {
+      background:
+        radial-gradient(circle at center, rgba(34, 197, 94, 0.12), transparent 20rem),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: auto, 48px 48px, 48px 48px;
+      padding: 1rem;
+      border: 1px solid rgba(34, 197, 94, 0.22);
+      border-radius: 1rem;
+    }
+
+    .mini-game-target {
+      color: #fef08a;
+      text-shadow: 0 0 16px rgba(250, 204, 21, 0.25);
+    }
+
+    footer {
+      color: rgba(203, 213, 225, 0.72);
+    }
+
+    @media (max-width: 760px) {
+      header { padding: 1rem; }
+      main { padding: 1rem; }
+      .card { border-radius: 0.85rem; }
+      h1 { font-size: 1.65rem; }
+    }
+
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>Sports Master</h1>
+        <div id="weekSummary">Loading...</div>
+      </div>
+
+      <div id="signedInActions" class="hidden">
+        <button id="signOutButton" class="secondary">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="authCard" class="card">
+      <h2>Register or sign in</h2>
+      <p class="muted">
+        Register once using your name, preferred name and email address. After that, sign in to play each week.
+      </p>
+
+      <div class="grid two">
+        <form id="registerForm" class="grid">
+          <h3>New player</h3>
+
+          <label>
+            Full name
+            <input id="registerFullName" autocomplete="name" required />
+          </label>
+
+          <label>
+            Preferred name or nickname
+            <input id="registerNickname" required />
+          </label>
+
+          <label>
+            Email address
+            <input id="registerEmail" type="email" autocomplete="email" required />
+          </label>
+
+          <label>
+            Password
+            <input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+
+          <button type="submit">Register</button>
+          <div id="registerMessage"></div>
+        </form>
+
+        <form id="signInForm" class="grid">
+          <h3>Returning player</h3>
+
+          <label>
+            Email address
+            <input id="signInEmail" type="email" autocomplete="email" required />
+          </label>
+
+          <label>
+            Password
+            <input id="signInPassword" type="password" autocomplete="current-password" required />
+          </label>
+
+          <button type="submit">Sign in</button>
+          <div id="signInMessage"></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="playerCard" class="card hidden">
+      <div class="toolbar">
+        <div>
+          <h2 id="welcomeTitle">Welcome</h2>
+          <p id="playerStatus" class="muted"></p>
+        </div>
+
+        <button id="withdrawButton" class="danger">Withdraw this week</button>
+      </div>
+    </section>
+
+    <section id="eventCard" class="card hidden">
+      <h2>Your event column</h2>
+      <p class="muted">
+        Choose one sporting event for the week. The event must start between Friday 1700 and Monday 0800 New Zealand Time.
+      </p>
+
+      <form id="eventForm" class="grid">
+        <div class="grid two">
+          <label>
+            Sport
+            <input id="sport" placeholder="Football, rugby, horse racing..." required />
+          </label>
+
+          <label>
+            Event
+            <input id="eventName" placeholder="Team A v Team B, Race 6..." required />
+          </label>
+        </div>
+
+        <div class="grid two">
+          <label>
+            Event link
+            <input id="eventLink" type="url" placeholder="https://..." required />
+          </label>
+
+          <label>
+            Event start time, New Zealand time
+            <input id="eventStartAt" type="datetime-local" required />
+          </label>
+        </div>
+
+        <label>
+          Challenge description
+          <textarea id="challengeDescription" placeholder="Example: total goals scored, race winner, time of first goal..." required></textarea>
+        </label>
+
+        <label>
+          Prediction format
+          <input id="predictionFormat" placeholder="Example: Team by 7, Player name, 3-1, 02:35, Horse name..." required />
+          <span class="format-hint">This appears in each player’s prediction box as the suggested format, helping everyone answer consistently while predictions remain hidden.</span>
+        </label>
+
+        <div class="grid tie-break-options">
+          <label>
+            Event tie-break
+            <select id="tieBreakType">
+              <option value="none">None</option>
+              <option value="text">Tie-breaker</option>
+              <option value="numeric">Stop the Timer</option>
+            </select>
+            <span class="format-hint">Use this when the main prediction may not produce a clear winner. With a tie-breaker, identical main predictions are allowed, but the prediction plus tie-break answer must still be unique.</span>
+          </label>
+
+          <div id="tieBreakDetails" class="grid hidden">
+            <label>
+              Tie-break question
+              <input id="tieBreakQuestion" placeholder="Example: Half-time score, total match points, winning time..." />
+            </label>
+
+            <label>
+              Tie-break format
+              <input id="tieBreakFormat" placeholder="Example: HT 1:0, number only, 02:35..." />
+            </label>
+          </div>
+        </div>
+
+        <button id="saveEventButton" type="submit">Save my event</button>
+        <div id="eventMessage"></div>
+      </form>
+    </section>
+
+    <section id="gameCard" class="card hidden">
+      <div class="toolbar">
+        <div>
+          <h2>This week’s game</h2>
+          <p id="lockMessage" class="muted"></p>
+        </div>
+
+        <div class="week-controls">
+          <label>
+            View week
+            <select id="weekSelector"></select>
+          </label>
+          <button id="latestWeekButton" type="button" class="secondary">View latest week</button>
+          <span id="statusBadge" class="status">Open</span>
+        </div>
+      </div>
+
+      <div id="historyNotice" class="notice warn hidden">
+        You are viewing a previous week. Event entries and predictions are read-only, but event owners can still select missing winners and add actual results.
+      </div>
+
+      <div id="emptyGameNotice" class="notice hidden">
+        No events have been added yet.
+      </div>
+
+      <div class="table-wrap">
+        <table id="gameTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="sportsmasterTieBreakCard" class="card hidden">
+      <div class="toolbar">
+        <div>
+          <h2>Sports Master weekly tie-breaker - Stop the Timer</h2>
+          <p class="muted">When the weekly winner is tied - Stop the Timer</p>
+        </div>
+        <span id="miniGameStatus" class="status">Ready</span>
+      </div>
+
+      <div class="mini-game-panel">
+        <div id="miniGameTarget" class="mini-game-target">Target: loading...</div>
+        <div class="muted">Click start, then press SPACE or click stop when you think you've reached the target. The timer is hidden while you play. Closest wins.</div>
+        <div>
+          <button id="miniGameStartButton" type="button">Start tie-breaker</button>
+          <button id="miniGameStopButton" type="button" class="secondary" disabled>Stop</button>
+        </div>
+        <div id="miniGameMessage" class="mini-game-result"></div>
+        <div id="miniGameLeaderboard"></div>
+      </div>
+    </section>
+
+    <section id="scoreCard" class="card hidden">
+      <h2>Leaderboard</h2>
+      <p class="muted">The week column shows points for the week currently selected above. Total points are calculated across all saved weeks.</p>
+      <div id="leaderboard"></div>
+    </section>
+
+    <section class="card rules">
+      <h2>Rules</h2>
+      <ol>
+        <li>Players must register with their full name, preferred name or nickname, and email address.</li>
+        <li>Each active player may create one event column per week.</li>
+        <li>Events must occur between 1700 New Zealand Time on Friday and 0800 New Zealand Time on Monday.</li>
+        <li>All events and predictions must be entered before 1700 New Zealand Time on Friday.</li>
+        <li>No new entries, edits or predictions are allowed during the event window.</li>
+        <li>Each challenge must have a clear result so that one winner can be chosen.</li>
+        <li>After Friday 1700 New Zealand Time, event owners can record the actual result and select the winning prediction.</li>
+        <li>Each event owner must specify a prediction format so players know how to answer.</li>
+        <li>Each event owner may add an optional tie-break question. The default is none.</li>
+        <li>Identical main predictions are only allowed when that event has a tie-breaker. Without a tie-breaker, predictions must be unique.</li>
+        <li>The winner of each event category gets one point. Everyone else gets zero for that category.</li>
+        <li>Players may withdraw from the weekly game if they choose.</li>
+        <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only, but event owners can still select missing winners and add actual results.</li>
+        <li>The Sports Master weekly tie-break game can be used if the overall weekly points table is tied.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    Sports Master - Weekly Sports Challenge
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      setDoc,
+      getDoc,
+      getDocs,
+      onSnapshot,
+      serverTimestamp,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAawyNX4CCAe_IsU4ZJTar2npxFyqwHFrE",
+      authDomain: "sportmaster-d86e0.firebaseapp.com",
+      projectId: "sportmaster-d86e0",
+      storageBucket: "sportmaster-d86e0.firebasestorage.app",
+      messagingSenderId: "178820430750",
+      appId: "1:178820430750:web:93e8db4fc4623cc712b48f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const NZ_TIME_ZONE = "Pacific/Auckland";
+
+    let currentUser = null;
+    let currentPlayer = null;
+    let players = [];
+    let weeks = [];
+    let events = [];
+    let predictionsByEvent = {};
+    let sportsmasterTieBreakAttempts = [];
+    let sportsmasterTieBreakTarget = null;
+    let miniGameRunning = false;
+    let miniGameStartedAt = null;
+    let allTimeScores = new Map();
+    let selectedWeekId = null;
+    let eventFormDirty = false;
+    let eventFormLoadedKey = null;
+    let predictionDrafts = new Map();
+    let tieBreakDrafts = new Map();
+    let actualResultDrafts = new Map();
+    let unsubscribePlayers = null;
+    let unsubscribeWeeks = null;
+    let unsubscribeEvents = null;
+    let unsubscribePredictions = [];
+    let unsubscribeSportsmasterTieBreak = null;
+
+    const els = {
+      weekSummary: document.querySelector("#weekSummary"),
+      signedInActions: document.querySelector("#signedInActions"),
+      signOutButton: document.querySelector("#signOutButton"),
+
+      authCard: document.querySelector("#authCard"),
+      playerCard: document.querySelector("#playerCard"),
+      eventCard: document.querySelector("#eventCard"),
+      gameCard: document.querySelector("#gameCard"),
+      sportsmasterTieBreakCard: document.querySelector("#sportsmasterTieBreakCard"),
+      scoreCard: document.querySelector("#scoreCard"),
+
+      registerForm: document.querySelector("#registerForm"),
+      registerFullName: document.querySelector("#registerFullName"),
+      registerNickname: document.querySelector("#registerNickname"),
+      registerEmail: document.querySelector("#registerEmail"),
+      registerPassword: document.querySelector("#registerPassword"),
+      registerMessage: document.querySelector("#registerMessage"),
+
+      signInForm: document.querySelector("#signInForm"),
+      signInEmail: document.querySelector("#signInEmail"),
+      signInPassword: document.querySelector("#signInPassword"),
+      signInMessage: document.querySelector("#signInMessage"),
+
+      welcomeTitle: document.querySelector("#welcomeTitle"),
+      playerStatus: document.querySelector("#playerStatus"),
+      withdrawButton: document.querySelector("#withdrawButton"),
+
+      eventForm: document.querySelector("#eventForm"),
+      sport: document.querySelector("#sport"),
+      eventName: document.querySelector("#eventName"),
+      eventLink: document.querySelector("#eventLink"),
+      eventStartAt: document.querySelector("#eventStartAt"),
+      challengeDescription: document.querySelector("#challengeDescription"),
+      predictionFormat: document.querySelector("#predictionFormat"),
+      tieBreakType: document.querySelector("#tieBreakType"),
+      tieBreakDetails: document.querySelector("#tieBreakDetails"),
+      tieBreakQuestion: document.querySelector("#tieBreakQuestion"),
+      tieBreakFormat: document.querySelector("#tieBreakFormat"),
+      saveEventButton: document.querySelector("#saveEventButton"),
+      eventMessage: document.querySelector("#eventMessage"),
+
+      lockMessage: document.querySelector("#lockMessage"),
+      statusBadge: document.querySelector("#statusBadge"),
+      weekSelector: document.querySelector("#weekSelector"),
+      latestWeekButton: document.querySelector("#latestWeekButton"),
+      historyNotice: document.querySelector("#historyNotice"),
+      emptyGameNotice: document.querySelector("#emptyGameNotice"),
+      tableHead: document.querySelector("#tableHead"),
+      tableBody: document.querySelector("#tableBody"),
+      miniGameStatus: document.querySelector("#miniGameStatus"),
+      miniGameTarget: document.querySelector("#miniGameTarget"),
+      miniGameStartButton: document.querySelector("#miniGameStartButton"),
+      miniGameStopButton: document.querySelector("#miniGameStopButton"),
+      miniGameMessage: document.querySelector("#miniGameMessage"),
+      miniGameLeaderboard: document.querySelector("#miniGameLeaderboard"),
+      leaderboard: document.querySelector("#leaderboard")
+    };
+
+    function showMessage(element, message, type = "") {
+      element.textContent = message;
+      element.className = type;
+    }
+
+    function getNzParts(date = new Date()) {
+      const parts = new Intl.DateTimeFormat("en-NZ", {
+        timeZone: NZ_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).formatToParts(date);
+
+      const lookup = {};
+      for (const part of parts) lookup[part.type] = part.value;
+
+      const weekdayMap = {
+        Mon: 1,
+        Tue: 2,
+        Wed: 3,
+        Thu: 4,
+        Fri: 5,
+        Sat: 6,
+        Sun: 0
+      };
+
+      return {
+        year: Number(lookup.year),
+        month: Number(lookup.month),
+        day: Number(lookup.day),
+        weekday: weekdayMap[lookup.weekday],
+        hour: Number(lookup.hour),
+        minute: Number(lookup.minute)
+      };
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function dateId(year, month, day) {
+      return `${year}-${pad2(month)}-${pad2(day)}`;
+    }
+
+    function addDaysToDateId(dateString, days) {
+      const date = new Date(`${dateString}T12:00:00+12:00`);
+      date.setUTCDate(date.getUTCDate() + days);
+      const parts = getNzParts(date);
+      return dateId(parts.year, parts.month, parts.day);
+    }
+
+    function getCurrentWeekInfo() {
+      const nz = getNzParts();
+      const todayId = dateId(nz.year, nz.month, nz.day);
+      let daysToFriday = (5 - nz.weekday + 7) % 7;
+
+      if (nz.weekday === 6) daysToFriday = -1;
+      if (nz.weekday === 0) daysToFriday = -2;
+      if (nz.weekday === 1 && nz.hour < 13) daysToFriday = -3;
+
+      const fridayId = addDaysToDateId(todayId, daysToFriday);
+      const mondayId = addDaysToDateId(fridayId, 3);
+
+      return {
+        weekId: fridayId,
+        fridayId,
+        mondayId,
+        lockLabel: `${fridayId} 17:00 NZT`,
+        windowLabel: `${fridayId} 17:00 to ${mondayId} 08:00 NZT`
+      };
+    }
+
+    function currentWeekId() {
+      return getCurrentWeekInfo().weekId;
+    }
+
+    function viewingCurrentWeek() {
+      return selectedWeekId === currentWeekId();
+    }
+
+    function isLockedNow() {
+      const nz = getNzParts();
+      if (nz.weekday === 5 && nz.hour >= 17) return true;
+      if (nz.weekday === 6) return true;
+      if (nz.weekday === 0) return true;
+      if (nz.weekday === 1 && nz.hour < 13) return true;
+      return false;
+    }
+    function predictionsAreRevealed() {
+      return isLockedNow();
+    }
+
+    function isReadOnlyView() {
+      return !viewingCurrentWeek();
+    }
+
+    function selectedWeekIsBeforeCurrentWeek() {
+      return String(selectedWeekId || "") < String(currentWeekId());
+    }
+
+    function winnerSelectionIsOpen() {
+      if (!selectedWeekId) return false;
+
+      if (selectedWeekIsBeforeCurrentWeek()) return true;
+
+      return viewingCurrentWeek() && predictionsAreRevealed();
+    }
+
+    function isEventTimeInsideWindow(datetimeLocal) {
+      if (!datetimeLocal) return false;
+      const eventDate = new Date(datetimeLocal);
+      const parts = getNzParts(eventDate);
+      if (parts.weekday === 5 && parts.hour >= 17) return true;
+      if (parts.weekday === 6) return true;
+      if (parts.weekday === 0) return true;
+      if (parts.weekday === 1 && parts.hour < 13) return true;
+      return false;
+    }
+
+    function normalisePrediction(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function draftKey(eventId, playerId = currentUser ? currentUser.uid : "") {
+      return `${selectedWeekId}|${eventId}|${playerId || ""}`;
+    }
+
+    function actualResultDraftKey(eventId) {
+      return `${selectedWeekId}|${eventId}|actualResult`;
+    }
+
+    function captureTableDrafts() {
+      if (!currentUser) return;
+
+      document.querySelectorAll(".prediction-input").forEach(input => {
+        if (input.dataset.eventId) {
+          predictionDrafts.set(draftKey(input.dataset.eventId), input.value);
+        }
+      });
+
+      document.querySelectorAll(".tie-break-answer-input").forEach(input => {
+        if (input.dataset.eventId) {
+          tieBreakDrafts.set(draftKey(input.dataset.eventId), input.value);
+        }
+      });
+
+      document.querySelectorAll(".actual-result-input").forEach(input => {
+        if (input.dataset.eventId) {
+          actualResultDrafts.set(actualResultDraftKey(input.dataset.eventId), input.value);
+        }
+      });
+    }
+
+    function eventHasTieBreak(event) {
+      return event && event.tieBreakType && event.tieBreakType !== "none";
+    }
+
+    function randomWholeSeconds(min, max) {
+      const range = max - min + 1;
+      if (window.crypto && crypto.getRandomValues) {
+        const values = new Uint32Array(1);
+        crypto.getRandomValues(values);
+        return min + (values[0] % range);
+      }
+      return min + Math.floor(Math.random() * range);
+    }
+
+    function deterministicWholeSecondsFromWeek(weekId, min = 5, max = 12) {
+      const text = String(weekId || "sports-master");
+      let hash = 0;
+      for (let i = 0; i < text.length; i += 1) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(i);
+        hash |= 0;
+      }
+      const range = max - min + 1;
+      return min + (Math.abs(hash) % range);
+    }
+
+    function collectSportsmasterTieBreakAttempts() {
+      sportsmasterTieBreakAttempts = players
+        .map(player => {
+          const attempts = player.sportsmasterTieBreakAttempts || {};
+          const attempt = attempts[selectedWeekId];
+          if (!attempt) return null;
+          return {
+            id: player.id,
+            playerId: player.id,
+            playerNickname: player.nickname || player.fullName || "Player",
+            ...attempt
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function toggleTieBreakDetails() {
+      const enabled = els.tieBreakType.value !== "none";
+      els.tieBreakDetails.classList.toggle("hidden", !enabled);
+      els.tieBreakQuestion.required = enabled;
+      els.tieBreakFormat.required = enabled;
+      if (!enabled) {
+        els.tieBreakQuestion.value = "";
+        els.tieBreakFormat.value = "";
+      }
+    }
+
+    function updateWeekDisplay() {
+      const info = getCurrentWeekInfo();
+      const locked = isLockedNow();
+      const readOnly = isReadOnlyView();
+
+      els.weekSummary.innerHTML = `
+        <span class="status ${locked ? "locked" : ""}">
+          ${locked ? "Locked" : "Open"}
+        </span>
+        <span> Current week: ${info.weekId}. Event window: ${info.windowLabel}.</span>
+      `;
+
+      els.lockMessage.textContent = readOnly
+        ? `Viewing week ${selectedWeekId}. Event entries and predictions are read-only. Missing winners and actual results can still be saved by the event owner.`
+        : locked
+          ? "Entries are locked. Winner selection and actual result entry are now open for event owners."
+          : `Entries are open until ${info.lockLabel}. Winner selection and actual result entry open after Friday at 1700 New Zealand Time.`;
+
+      els.statusBadge.textContent = readOnly ? "Read-only" : locked ? "Locked" : "Open";
+      els.statusBadge.className = readOnly ? "status complete" : locked ? "status locked" : "status";
+      els.historyNotice.classList.toggle("hidden", !readOnly);
+      els.saveEventButton.disabled = locked || readOnly;
+    }
+
+    async function ensureWeekDocument() {
+      const info = getCurrentWeekInfo();
+      const weekRef = doc(db, "weeks", info.weekId);
+      const snap = await getDoc(weekRef);
+      const existing = snap.exists() ? snap.data() : null;
+
+      if (
+        existing &&
+        existing.weekId === info.weekId &&
+        existing.lockLabel === info.lockLabel &&
+        existing.eventWindowLabel === info.windowLabel
+      ) {
+        return;
+      }
+
+      await setDoc(weekRef, {
+        weekId: info.weekId,
+        lockLabel: info.lockLabel,
+        eventWindowLabel: info.windowLabel,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function loadCurrentPlayer(user) {
+      const snap = await getDoc(doc(db, "players", user.uid));
+      if (!snap.exists()) return null;
+      return { id: user.uid, ...snap.data() };
+    }
+
+    function startRealtimeListeners() {
+      stopRealtimeListeners();
+      selectedWeekId = selectedWeekId || currentWeekId();
+
+      unsubscribePlayers = onSnapshot(collection(db, "players"), snapshot => {
+        players = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => String(a.nickname || a.fullName).localeCompare(String(b.nickname || b.fullName)));
+        collectSportsmasterTieBreakAttempts();
+        render();
+      });
+
+      unsubscribeWeeks = onSnapshot(collection(db, "weeks"), snapshot => {
+        const currentId = currentWeekId();
+        weeks = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => String(b.weekId || b.id).localeCompare(String(a.weekId || a.id)));
+
+        if (!weeks.some(week => (week.weekId || week.id) === currentId)) {
+          weeks.unshift({ id: currentId, weekId: currentId });
+        }
+
+        if (!selectedWeekId || !weeks.some(week => (week.weekId || week.id) === selectedWeekId)) {
+          selectedWeekId = currentId;
+          startEventsListener();
+        }
+
+        renderWeekSelector();
+        refreshAllTimeScores();
+        render();
+      });
+
+      startEventsListener();
+    }
+
+    function startEventsListener() {
+      if (!selectedWeekId) selectedWeekId = currentWeekId();
+      if (unsubscribeEvents) unsubscribeEvents();
+      if (unsubscribeSportsmasterTieBreak) unsubscribeSportsmasterTieBreak();
+      for (const unsub of unsubscribePredictions) unsub();
+      unsubscribePredictions = [];
+      predictionsByEvent = {};
+      sportsmasterTieBreakAttempts = [];
+      predictionDrafts.clear();
+      tieBreakDrafts.clear();
+      actualResultDrafts.clear();
+      sportsmasterTieBreakTarget = null;
+      miniGameRunning = false;
+      miniGameStartedAt = null;
+
+      unsubscribeEvents = onSnapshot(collection(db, "weeks", selectedWeekId, "events"), snapshot => {
+        events = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => String(a.ownerNickname || "").localeCompare(String(b.ownerNickname || "")));
+        listenToPredictions();
+        render();
+      });
+
+      startSportsmasterTieBreakListener();
+    }
+
+    async function ensureSelectedWeekTieBreakTarget() {
+      if (!selectedWeekId) return;
+
+      try {
+        const weekRef = doc(db, "weeks", selectedWeekId);
+        const snap = await getDoc(weekRef);
+        const existingTarget = snap.exists() ? snap.data().sportsmasterTieBreakTarget : null;
+        sportsmasterTieBreakTarget = existingTarget || deterministicWholeSecondsFromWeek(selectedWeekId, 5, 12);
+      } catch (error) {
+        sportsmasterTieBreakTarget = deterministicWholeSecondsFromWeek(selectedWeekId, 5, 12);
+      }
+    }
+
+    async function startSportsmasterTieBreakListener() {
+      if (!selectedWeekId) return;
+      if (unsubscribeSportsmasterTieBreak) unsubscribeSportsmasterTieBreak();
+      unsubscribeSportsmasterTieBreak = null;
+
+      await ensureSelectedWeekTieBreakTarget();
+      collectSportsmasterTieBreakAttempts();
+      renderSportsmasterTieBreak();
+    }
+
+    function listenToPredictions() {
+      for (const unsub of unsubscribePredictions) unsub();
+      unsubscribePredictions = [];
+      predictionsByEvent = {};
+
+      for (const event of events) {
+        const unsub = onSnapshot(
+          collection(db, "weeks", selectedWeekId, "events", event.id, "predictions"),
+          snapshot => {
+            predictionsByEvent[event.id] = snapshot.docs.map(d => ({
+              id: d.id,
+              ...d.data()
+            }));
+            render();
+          }
+        );
+        unsubscribePredictions.push(unsub);
+      }
+    }
+
+    function stopRealtimeListeners() {
+      if (unsubscribePlayers) unsubscribePlayers();
+      if (unsubscribeWeeks) unsubscribeWeeks();
+      if (unsubscribeEvents) unsubscribeEvents();
+      if (unsubscribeSportsmasterTieBreak) unsubscribeSportsmasterTieBreak();
+      for (const unsub of unsubscribePredictions) unsub();
+
+      unsubscribePlayers = null;
+      unsubscribeWeeks = null;
+      unsubscribeEvents = null;
+      unsubscribeSportsmasterTieBreak = null;
+      unsubscribePredictions = [];
+    }
+
+    async function refreshAllTimeScores() {
+      const totals = new Map();
+      for (const player of players) totals.set(player.id, 0);
+
+      const weekSnaps = await getDocs(collection(db, "weeks"));
+      for (const weekSnap of weekSnaps.docs) {
+        const eventSnaps = await getDocs(collection(db, "weeks", weekSnap.id, "events"));
+        for (const eventSnap of eventSnaps.docs) {
+          const event = eventSnap.data();
+          if (event.winnerPlayerId) {
+            totals.set(event.winnerPlayerId, (totals.get(event.winnerPlayerId) || 0) + 1);
+          }
+        }
+      }
+
+      allTimeScores = totals;
+      renderLeaderboard();
+    }
+
+    async function refreshWeekIfNeeded() {
+      const latestWeekId = currentWeekId();
+      await ensureWeekDocument();
+
+      if (!currentUser || !currentPlayer) {
+        updateWeekDisplay();
+        return;
+      }
+
+      if (viewingCurrentWeek() && selectedWeekId !== latestWeekId) {
+        selectedWeekId = latestWeekId;
+        startEventsListener();
+      }
+
+      renderWeekSelector();
+      updateWeekDisplay();
+    }
+
+    async function savePrediction(eventId, predictionValue, tieBreakAnswerValue = "") {
+      if (!currentUser || !currentPlayer) return;
+      if (isReadOnlyView()) throw new Error("Previous weeks are read-only.");
+      if (isLockedNow()) throw new Error("Entries are locked for this week.");
+
+      const event = events.find(item => item.id === eventId);
+      const clean = String(predictionValue || "").trim();
+      const cleanTieBreak = String(tieBreakAnswerValue || "").trim();
+      if (!clean) throw new Error("Please enter a prediction.");
+      if (eventHasTieBreak(event) && !cleanTieBreak) throw new Error("Please enter a tie-break answer.");
+
+      const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
+      const predictionsRef = collection(eventRef, "predictions");
+      const myPredictionRef = doc(predictionsRef, currentUser.uid);
+
+      await runTransaction(db, async transaction => {
+        const predictionSnaps = await getDocs(predictionsRef);
+        const tieBreakEnabled = eventHasTieBreak(event);
+        const duplicate = predictionSnaps.docs.some(predictionDoc => {
+          if (predictionDoc.id === currentUser.uid) return false;
+          const existing = predictionDoc.data();
+          const samePrediction = normalisePrediction(existing.prediction) === normalisePrediction(clean);
+
+          if (!tieBreakEnabled) {
+            return samePrediction;
+          }
+
+          const sameTieBreak = normalisePrediction(existing.tieBreakAnswer) === normalisePrediction(cleanTieBreak);
+          return samePrediction && sameTieBreak;
+        });
+
+        if (duplicate) {
+          if (tieBreakEnabled) {
+            throw new Error("That prediction and tie-break answer combination has already been used for this event. Keep the main prediction if you want, but choose a different tie-break answer.");
+          }
+
+          throw new Error("That prediction has already been used for this event. Add a tie-breaker to the event if shared main predictions should be allowed.");
+        }
+
+        transaction.set(myPredictionRef, {
+          playerId: currentUser.uid,
+          playerNickname: currentPlayer.nickname,
+          prediction: clean,
+          tieBreakAnswer: cleanTieBreak,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      });
+    }
+
+    async function markWinner(eventId, winnerPlayerId) {
+      if (!currentUser) return;
+      if (!winnerSelectionIsOpen()) {
+        throw new Error("Winner selection opens after Friday at 1700 New Zealand Time.");
+      }
+
+      const event = events.find(item => item.id === eventId);
+      if (!event || event.ownerPlayerId !== currentUser.uid) {
+        throw new Error("Only the player who created this event can mark the winner.");
+      }
+
+      const prediction = (predictionsByEvent[eventId] || []).find(item => item.playerId === winnerPlayerId);
+      if (!prediction) throw new Error("Winner prediction was not found.");
+
+      const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
+
+      /*
+        Important permission fix:
+        Do not update players/{winnerPlayerId} here.
+
+        Normal players usually only have permission to edit their own player document.
+        The old version tried to increment lifetimePoints on the winner's player document.
+        That meant selecting yourself worked, but selecting another player could fail with
+        "insufficient permissions".
+
+        The leaderboard already calculates totals from the completed event documents,
+        so writing the winner to the event document is enough.
+      */
+      await runTransaction(db, async transaction => {
+        const eventSnap = await transaction.get(eventRef);
+        if (!eventSnap.exists()) throw new Error("Event was not found.");
+        if (eventSnap.data().winnerPlayerId) throw new Error("A winner has already been recorded for this event.");
+
+        transaction.set(eventRef, {
+          winnerPlayerId,
+          winningPrediction: prediction.prediction,
+          winningTieBreakAnswer: prediction.tieBreakAnswer || "",
+          completedAt: serverTimestamp()
+        }, { merge: true });
+      });
+
+      await refreshAllTimeScores();
+    }
+
+    async function saveActualResult(eventId, actualResultValue) {
+      if (!currentUser) return;
+      if (!winnerSelectionIsOpen()) {
+        throw new Error("Actual result entry opens after Friday at 1700 New Zealand Time.");
+      }
+
+      const event = events.find(item => item.id === eventId);
+      if (!event || event.ownerPlayerId !== currentUser.uid) {
+        throw new Error("Only the player who created this event can save the actual result.");
+      }
+
+      const cleanResult = String(actualResultValue || "").trim();
+      if (!cleanResult) throw new Error("Please enter the actual result.");
+
+      await setDoc(doc(db, "weeks", selectedWeekId, "events", eventId), {
+        actualResult: cleanResult,
+        resultUpdatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    function render() {
+      updateWeekDisplay();
+
+      if (!currentUser || !currentPlayer) return;
+
+      els.welcomeTitle.textContent = `Welcome, ${currentPlayer.nickname || currentPlayer.fullName}`;
+      els.playerStatus.textContent = currentPlayer.active === false
+        ? "You are currently withdrawn."
+        : "You are active for the weekly challenge.";
+
+      els.withdrawButton.textContent = currentPlayer.active === false
+        ? "Rejoin this week"
+        : "Withdraw this week";
+
+      const locked = isLockedNow();
+      const readOnly = isReadOnlyView();
+
+      els.eventCard.classList.toggle("hidden", currentPlayer.active === false || readOnly);
+      els.gameCard.classList.remove("hidden");
+      els.sportsmasterTieBreakCard.classList.remove("hidden");
+      els.scoreCard.classList.remove("hidden");
+      els.withdrawButton.disabled = readOnly;
+
+      renderWeekSelector();
+      renderEventForm();
+      renderTable(locked, readOnly);
+      renderSportsmasterTieBreak();
+      renderLeaderboard();
+    }
+
+    function renderWeekSelector() {
+      if (!els.weekSelector) return;
+      const currentId = currentWeekId();
+      const seen = new Set();
+      const options = [];
+
+      for (const week of [{ id: currentId, weekId: currentId }, ...weeks]) {
+        const id = week.weekId || week.id;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        const label = id === currentId ? `${id} (latest week)` : id;
+        options.push(`<option value="${escapeAttr(id)}" ${id === selectedWeekId ? "selected" : ""}>${escapeHtml(label)}</option>`);
+      }
+
+      els.weekSelector.innerHTML = options.join("");
+    }
+
+    function renderEventForm() {
+      const myEvent = events.find(event => event.ownerPlayerId === currentUser.uid);
+      const formHasFocus = els.eventForm.contains(document.activeElement);
+      const formKey = myEvent
+        ? `${selectedWeekId}|${myEvent.id}|${myEvent.updatedAt?.seconds || ""}|${myEvent.eventName || ""}|${myEvent.predictionFormat || ""}|${myEvent.tieBreakType || "none"}|${myEvent.tieBreakQuestion || ""}|${myEvent.tieBreakFormat || ""}`
+        : `${selectedWeekId}|empty`;
+
+      if (myEvent) {
+        els.saveEventButton.textContent = eventFormDirty ? "Update event" : "Update saved event";
+      } else {
+        els.saveEventButton.textContent = eventFormDirty ? "Save new event" : "Save my event";
+      }
+
+      /*
+        Do not reset the form while the player is typing. Realtime Firestore
+        snapshots can call render() repeatedly, and resetting here would wipe
+        an in-progress event before it has been saved.
+      */
+      if (eventFormDirty || formHasFocus) return;
+
+      if (eventFormLoadedKey === formKey) return;
+
+      if (!myEvent) {
+        els.eventForm.reset();
+        els.tieBreakType.value = "none";
+        toggleTieBreakDetails();
+        els.saveEventButton.textContent = "Save my event";
+        if (!els.eventMessage.classList.contains("error")) showMessage(els.eventMessage, "No event saved yet for this week.", "");
+        eventFormLoadedKey = formKey;
+        return;
+      }
+
+      els.sport.value = myEvent.sport || "";
+      els.eventName.value = myEvent.eventName || "";
+      els.eventLink.value = myEvent.eventLink || "";
+      els.eventStartAt.value = myEvent.eventStartAt || "";
+      els.challengeDescription.value = myEvent.challengeDescription || "";
+      els.predictionFormat.value = myEvent.predictionFormat || "";
+      els.tieBreakType.value = myEvent.tieBreakType || "none";
+      els.tieBreakQuestion.value = myEvent.tieBreakQuestion || "";
+      els.tieBreakFormat.value = myEvent.tieBreakFormat || "";
+      toggleTieBreakDetails();
+      els.saveEventButton.textContent = "Update saved event";
+      if (!els.eventMessage.classList.contains("error")) {
+        showMessage(els.eventMessage, "Event saved. Any further changes will update this event.", "success");
+      }
+      eventFormLoadedKey = formKey;
+    }
+
+    function renderTable(locked, readOnly) {
+      captureTableDrafts();
+      els.emptyGameNotice.classList.toggle("hidden", events.length > 0);
+      const visiblePlayers = readOnly ? players : players.filter(player => player.active !== false);
+
+      els.tableHead.innerHTML = `
+        <tr>
+          <th>Field</th>
+          ${events.map(event => `<th>${escapeHtml(event.ownerNickname || "Player")}</th>`).join("")}
+        </tr>
+      `;
+
+      const rows = [];
+
+      rows.push(`
+        <tr>
+          <td>Sport</td>
+          ${events.map(event => `<td>${escapeHtml(event.sport || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Event</td>
+          ${events.map(event => `<td>${escapeHtml(event.eventName || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Link</td>
+          ${events.map(event => `
+            <td>
+              ${event.eventLink ? `<a href="${escapeAttr(event.eventLink)}" target="_blank" rel="noopener">Open event</a>` : ""}
+            </td>
+          `).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Challenge</td>
+          ${events.map(event => `<td>${escapeHtml(event.challengeDescription || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Prediction format</td>
+          ${events.map(event => `<td>${escapeHtml(event.predictionFormat || "")}</td>`).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Tie-break</td>
+          ${events.map(event => renderTieBreakInfoCell(event)).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Actual result</td>
+          ${events.map(event => renderActualResultCell(event)).join("")}
+        </tr>
+      `);
+
+      rows.push(`
+        <tr>
+          <td>Winner</td>
+          ${events.map(event => `
+            <td>
+              ${event.winnerPlayerId
+                ? `<span class="score-pill">${escapeHtml(getPlayerName(event.winnerPlayerId))}: ${escapeHtml(event.winningPrediction || "")}${event.winningTieBreakAnswer ? ` | TB: ${escapeHtml(event.winningTieBreakAnswer)}` : ""}</span>`
+                : renderWinnerSelect(event, readOnly)}
+            </td>
+          `).join("")}
+        </tr>
+      `);
+
+      for (const player of visiblePlayers) {
+        rows.push(`
+          <tr>
+            <td>${escapeHtml(player.nickname || player.fullName || "Player")}</td>
+            ${events.map(event => renderPredictionCell(event, player, locked, readOnly)).join("")}
+          </tr>
+        `);
+      }
+
+      els.tableBody.innerHTML = rows.join("");
+      attachPredictionHandlers();
+      attachWinnerHandlers();
+      attachResultHandlers();
+    }
+
+    function renderTieBreakInfoCell(event) {
+      if (!eventHasTieBreak(event)) {
+        return `<td><span class="muted">None</span></td>`;
+      }
+
+      const typeLabel = event.tieBreakType === "numeric" ? "Closest numeric answer" : "Tie-break answer";
+      return `
+        <td>
+          <strong>${escapeHtml(typeLabel)}</strong><br />
+          ${escapeHtml(event.tieBreakQuestion || "")}
+          ${event.tieBreakFormat ? `<span class="format-hint">Format: ${escapeHtml(event.tieBreakFormat)}</span>` : ""}
+        </td>
+      `;
+    }
+
+    function renderPredictionCell(event, player, locked, readOnly) {
+      const predictions = predictionsByEvent[event.id] || [];
+      const existing = predictions.find(item => item.playerId === player.id);
+      const isMe = currentUser && player.id === currentUser.uid;
+      const winnerClass = event.winnerPlayerId === player.id ? "score-pill" : "";
+      const revealed = predictionsAreRevealed() || readOnly || Boolean(event.winnerPlayerId);
+      const tieBreakEnabled = eventHasTieBreak(event);
+      const key = draftKey(event.id, player.id);
+      const savedPrediction = existing ? existing.prediction || "" : "";
+      const savedTieBreak = existing ? existing.tieBreakAnswer || "" : "";
+      const predictionValue = predictionDrafts.has(key)
+        ? predictionDrafts.get(key)
+        : savedPrediction;
+      const tieBreakValue = tieBreakDrafts.has(key)
+        ? tieBreakDrafts.get(key)
+        : savedTieBreak;
+      const hasPredictionDraft = predictionDrafts.has(key) || tieBreakDrafts.has(key);
+      const predictionHasUnsavedChanges = existing
+        ? predictionValue !== savedPrediction || tieBreakValue !== savedTieBreak
+        : hasPredictionDraft && (Boolean(predictionValue) || Boolean(tieBreakValue));
+      const predictionButtonLabel = existing ? "Update prediction" : "Save prediction";
+      const predictionStatusText = existing
+        ? predictionHasUnsavedChanges ? "Unsaved changes" : "Prediction saved"
+        : predictionHasUnsavedChanges ? "Not saved yet" : "";
+      const predictionStatusClass = existing
+        ? predictionHasUnsavedChanges ? "unsaved" : "saved"
+        : predictionHasUnsavedChanges ? "unsaved" : "empty";
+
+      function formatVisiblePrediction(prediction) {
+        if (!prediction) return "";
+        const tieBreakText = tieBreakEnabled && prediction.tieBreakAnswer
+          ? `<span class="format-hint">Tie-break: ${escapeHtml(prediction.tieBreakAnswer)}</span>`
+          : "";
+        return `${escapeHtml(prediction.prediction || "")}${tieBreakText}`;
+      }
+
+      if (!isMe) {
+        let displayValue = "";
+
+        if (existing) {
+          displayValue = revealed
+            ? formatVisiblePrediction(existing)
+            : "Prediction submitted";
+        }
+
+        return `
+          <td>
+            <span class="${winnerClass}">
+              ${displayValue}
+            </span>
+          </td>
+        `;
+      }
+
+      if (readOnly || revealed) {
+        return `
+          <td>
+            <span class="${winnerClass}">
+              ${formatVisiblePrediction(existing)}
+            </span>
+          </td>
+        `;
+      }
+
+      return `
+        <td>
+          <div class="prediction-cell">
+            <input
+              data-event-id="${escapeAttr(event.id)}"
+              class="prediction-input"
+              value="${escapeAttr(predictionValue)}" 
+              placeholder="${escapeAttr(event.predictionFormat || "Your prediction")}"
+              ${locked ? "disabled" : ""}
+            />
+            ${event.predictionFormat ? `<span class="format-hint">Format: ${escapeHtml(event.predictionFormat)}</span>` : ""}
+            ${tieBreakEnabled ? `
+              <input
+                data-event-id="${escapeAttr(event.id)}"
+                class="tie-break-answer-input"
+                value="${escapeAttr(tieBreakValue)}"
+                placeholder="${escapeAttr(event.tieBreakFormat || "Tie-break answer")}"
+                ${locked ? "disabled" : ""}
+              />
+              <span class="format-hint">Tie-break: ${escapeHtml(event.tieBreakQuestion || "")}${event.tieBreakFormat ? ` Format: ${escapeHtml(event.tieBreakFormat)}` : ""}</span>
+            ` : ""}
+            <button
+              class="small save-prediction-button"
+              data-event-id="${escapeAttr(event.id)}"
+              ${locked ? "disabled" : ""}
+            >
+              ${escapeHtml(predictionButtonLabel)}
+            </button>
+            <span class="save-status prediction-save-status ${predictionStatusClass}">${escapeHtml(predictionStatusText)}</span>
+          </div>
+        </td>
+      `;
+    }
+
+    function renderActualResultCell(event) {
+      const canEditResult =
+        currentUser &&
+        event.ownerPlayerId === currentUser.uid &&
+        winnerSelectionIsOpen();
+
+      if (!canEditResult) {
+        return `<td>${event.actualResult ? escapeHtml(event.actualResult) : `<span class="muted">Pending</span>`}</td>`;
+      }
+
+      const key = actualResultDraftKey(event.id);
+      const savedActualResult = event.actualResult || "";
+      const actualResultValue = actualResultDrafts.has(key)
+        ? actualResultDrafts.get(key)
+        : savedActualResult;
+      const actualResultHasUnsavedChanges = actualResultDrafts.has(key) && actualResultValue !== savedActualResult;
+      const actualResultButtonLabel = savedActualResult ? "Update actual result" : "Save actual result";
+      const actualResultStatusText = savedActualResult
+        ? actualResultHasUnsavedChanges ? "Unsaved changes" : "Actual result saved"
+        : actualResultHasUnsavedChanges || actualResultValue ? "Not saved yet" : "";
+      const actualResultStatusClass = savedActualResult
+        ? actualResultHasUnsavedChanges ? "unsaved" : "saved"
+        : actualResultStatusText ? "unsaved" : "empty";
+
+      return `
+        <td>
+          <div class="result-cell">
+            <input
+              class="actual-result-input"
+              data-event-id="${escapeAttr(event.id)}"
+              value="${escapeAttr(actualResultValue)}"
+              placeholder="Actual result, e.g. Hurricanes 20, Chiefs 12"
+            />
+            <button
+              class="small save-result-button"
+              data-event-id="${escapeAttr(event.id)}"
+              type="button"
+            >
+              ${escapeHtml(actualResultButtonLabel)}
+            </button>
+            <span class="save-status actual-result-save-status ${actualResultStatusClass}">${escapeHtml(actualResultStatusText)}</span>
+          </div>
+        </td>
+      `;
+    }
+
+    function renderWinnerSelect(event, readOnly) {
+      if (!currentUser || event.ownerPlayerId !== currentUser.uid) {
+        return `<span class="muted">Pending</span>`;
+      }
+
+      if (!winnerSelectionIsOpen()) {
+        return `<span class="muted">Winner selection opens after Friday 1700 NZT</span>`;
+      }
+
+      const predictions = predictionsByEvent[event.id] || [];
+      if (predictions.length === 0) return `<span class="muted">No predictions yet</span>`;
+
+      return `
+        <select class="winner-select" data-event-id="${escapeAttr(event.id)}">
+          <option value="">Choose winner...</option>
+          ${predictions.map(prediction => `
+            <option value="${escapeAttr(prediction.playerId)}">
+              ${escapeHtml(prediction.playerNickname || getPlayerName(prediction.playerId))}: ${escapeHtml(prediction.prediction)}${prediction.tieBreakAnswer ? ` | TB: ${escapeHtml(prediction.tieBreakAnswer)}` : ""}
+            </option>
+          `).join("")}
+        </select>
+      `;
+    }
+
+    function getMySportsmasterTieBreakAttempt() {
+      if (!currentUser) return null;
+      return sportsmasterTieBreakAttempts.find(attempt => attempt.playerId === currentUser.uid || attempt.id === currentUser.uid) || null;
+    }
+
+    async function saveSportsmasterTieBreakAttempt(elapsedSeconds) {
+      if (!currentUser || !currentPlayer || !selectedWeekId) return;
+      if (!sportsmasterTieBreakTarget) throw new Error("Tie-break target is not ready yet.");
+
+      if (getMySportsmasterTieBreakAttempt()) {
+        throw new Error("You have already played this tie-break for the selected week.");
+      }
+
+      const roundedElapsed = Number(elapsedSeconds.toFixed(3));
+      const differenceSeconds = Number(Math.abs(roundedElapsed - Number(sportsmasterTieBreakTarget)).toFixed(3));
+      const attempt = {
+        targetSeconds: Number(sportsmasterTieBreakTarget),
+        resultSeconds: roundedElapsed,
+        differenceSeconds,
+        createdAtMs: Date.now()
+      };
+
+      await setDoc(doc(db, "players", currentUser.uid), {
+        sportsmasterTieBreakAttempts: {
+          [selectedWeekId]: attempt
+        },
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      sportsmasterTieBreakAttempts = sportsmasterTieBreakAttempts
+        .filter(existingAttempt => existingAttempt.playerId !== currentUser.uid && existingAttempt.id !== currentUser.uid);
+      sportsmasterTieBreakAttempts.push({
+        id: currentUser.uid,
+        playerId: currentUser.uid,
+        playerNickname: currentPlayer.nickname || currentPlayer.fullName,
+        ...attempt
+      });
+    }
+
+    function startMiniGame() {
+      if (!currentUser || !currentPlayer) return;
+      if (getMySportsmasterTieBreakAttempt()) {
+        showMessage(els.miniGameMessage, "You have already played this tie-break for the selected week.", "error");
+        return;
+      }
+
+      miniGameRunning = true;
+      miniGameStartedAt = performance.now();
+      els.miniGameStartButton.disabled = true;
+      els.miniGameStopButton.disabled = false;
+      els.miniGameStatus.textContent = "Running";
+      els.miniGameStatus.className = "status locked";
+      showMessage(els.miniGameMessage, "Timer running. Press SPACE or click Stop.", "");
+    }
+
+    async function stopMiniGame() {
+      if (!miniGameRunning || !miniGameStartedAt) return;
+
+      const elapsedSeconds = (performance.now() - miniGameStartedAt) / 1000;
+      miniGameRunning = false;
+      miniGameStartedAt = null;
+      els.miniGameStopButton.disabled = true;
+
+      try {
+        await saveSportsmasterTieBreakAttempt(elapsedSeconds);
+        showMessage(
+          els.miniGameMessage,
+          `Saved: ${elapsedSeconds.toFixed(3)} seconds. Target was ${sportsmasterTieBreakTarget} seconds.`,
+          "success"
+        );
+      } catch (error) {
+        showMessage(els.miniGameMessage, error.message, "error");
+      } finally {
+        renderSportsmasterTieBreak();
+      }
+    }
+
+    function renderSportsmasterTieBreak() {
+      if (!currentUser || !currentPlayer || !els.sportsmasterTieBreakCard) return;
+
+      const myAttempt = getMySportsmasterTieBreakAttempt();
+      const ordered = [...sportsmasterTieBreakAttempts].sort((a, b) =>
+        Number(a.differenceSeconds || 999) - Number(b.differenceSeconds || 999) ||
+        String(a.playerNickname || "").localeCompare(String(b.playerNickname || ""))
+      );
+
+      els.miniGameTarget.textContent = sportsmasterTieBreakTarget
+        ? `Target: ${sportsmasterTieBreakTarget} seconds`
+        : "Target: loading...";
+
+      if (!miniGameRunning) {
+        els.miniGameStatus.textContent = myAttempt ? "Played" : "Ready";
+        els.miniGameStatus.className = myAttempt ? "status complete" : "status";
+        els.miniGameStartButton.disabled = Boolean(myAttempt) || !sportsmasterTieBreakTarget;
+        els.miniGameStopButton.disabled = true;
+      }
+
+      if (myAttempt && !miniGameRunning) {
+        showMessage(
+          els.miniGameMessage,
+          `Your result: ${Number(myAttempt.resultSeconds).toFixed(3)} seconds. Difference: ${Number(myAttempt.differenceSeconds).toFixed(3)} seconds.`,
+          "success"
+        );
+      }
+
+      if (ordered.length === 0) {
+        els.miniGameLeaderboard.innerHTML = `<p class="muted">No tie-break attempts have been recorded for this week yet.</p>`;
+        return;
+      }
+
+      els.miniGameLeaderboard.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Result</th>
+                <th>Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordered.map(attempt => `
+                <tr>
+                  <td>${escapeHtml(attempt.playerNickname || getPlayerName(attempt.playerId))}</td>
+                  <td>${Number(attempt.resultSeconds || 0).toFixed(3)}s</td>
+                  <td>${Number(attempt.differenceSeconds || 0).toFixed(3)}s</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function getSelectedWeekPointsByPlayer() {
+      const selectedWeekScores = new Map();
+      for (const player of players) selectedWeekScores.set(player.id, 0);
+
+      for (const event of events) {
+        if (event.winnerPlayerId) {
+          selectedWeekScores.set(
+            event.winnerPlayerId,
+            (selectedWeekScores.get(event.winnerPlayerId) || 0) + 1
+          );
+        }
+      }
+
+      return selectedWeekScores;
+    }
+
+    function renderLeaderboard() {
+      const selectedWeekScores = getSelectedWeekPointsByPlayer();
+      const selectedWeekLabel = viewingCurrentWeek()
+        ? "Latest week"
+        : `Selected week ${selectedWeekId}`;
+
+      const ordered = players
+        .map(player => ({
+          id: player.id,
+          name: player.nickname || player.fullName || "Player",
+          selectedWeekPoints: Number(selectedWeekScores.get(player.id) || 0),
+          lifetimePoints: Number(allTimeScores.get(player.id) ?? player.lifetimePoints ?? 0)
+        }))
+        .sort((a, b) => b.lifetimePoints - a.lifetimePoints || a.name.localeCompare(b.name));
+
+      if (ordered.length === 0) {
+        els.leaderboard.innerHTML = `<p class="muted">No players yet.</p>`;
+        return;
+      }
+
+      els.leaderboard.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>${escapeHtml(selectedWeekLabel)}</th>
+                <th>Total points</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordered.map(row => `
+                <tr>
+                  <td>${escapeHtml(row.name)}</td>
+                  <td>${row.selectedWeekPoints}</td>
+                  <td>${row.lifetimePoints}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function markPredictionInputUnsaved(input) {
+      const cell = input.closest(".prediction-cell");
+      if (!cell) return;
+      const status = cell.querySelector(".prediction-save-status");
+      const button = cell.querySelector(".save-prediction-button");
+      if (button && button.textContent.trim() !== "Save prediction") {
+        button.textContent = "Update prediction";
+      }
+      if (status) {
+        status.textContent = button && button.textContent.trim() === "Save prediction" ? "Not saved yet" : "Unsaved changes";
+        status.className = "save-status prediction-save-status unsaved";
+      }
+    }
+
+    function attachPredictionHandlers() {
+      document.querySelectorAll(".prediction-input").forEach(input => {
+        input.addEventListener("input", () => {
+          if (input.dataset.eventId) {
+            predictionDrafts.set(draftKey(input.dataset.eventId), input.value);
+            markPredictionInputUnsaved(input);
+          }
+        });
+      });
+
+      document.querySelectorAll(".tie-break-answer-input").forEach(input => {
+        input.addEventListener("input", () => {
+          if (input.dataset.eventId) {
+            tieBreakDrafts.set(draftKey(input.dataset.eventId), input.value);
+            markPredictionInputUnsaved(input);
+          }
+        });
+      });
+
+      document.querySelectorAll(".save-prediction-button").forEach(button => {
+        button.addEventListener("click", async () => {
+          const eventId = button.dataset.eventId;
+          const input = document.querySelector(`.prediction-input[data-event-id="${cssEscape(eventId)}"]`);
+          const tieBreakInput = document.querySelector(`.tie-break-answer-input[data-event-id="${cssEscape(eventId)}"]`);
+
+          try {
+            button.disabled = true;
+            await savePrediction(eventId, input.value, tieBreakInput ? tieBreakInput.value : "");
+            predictionDrafts.delete(draftKey(eventId));
+            tieBreakDrafts.delete(draftKey(eventId));
+            button.textContent = "Update prediction";
+            const status = button.parentElement.querySelector(".prediction-save-status");
+            if (status) {
+              status.textContent = "Prediction saved";
+              status.className = "save-status prediction-save-status saved";
+            }
+          } catch (error) {
+            alert(error.message);
+          } finally {
+            button.disabled = isLockedNow() || isReadOnlyView();
+          }
+        });
+      });
+    }
+
+    function attachResultHandlers() {
+      document.querySelectorAll(".actual-result-input").forEach(input => {
+        input.addEventListener("input", () => {
+          if (input.dataset.eventId) {
+            actualResultDrafts.set(actualResultDraftKey(input.dataset.eventId), input.value);
+            const cell = input.closest(".result-cell");
+            const status = cell ? cell.querySelector(".actual-result-save-status") : null;
+            const button = cell ? cell.querySelector(".save-result-button") : null;
+            if (button && button.textContent.trim() !== "Save actual result") button.textContent = "Update actual result";
+            if (status) {
+              status.textContent = button && button.textContent.trim() === "Save actual result" ? "Not saved yet" : "Unsaved changes";
+              status.className = "save-status actual-result-save-status unsaved";
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll(".save-result-button").forEach(button => {
+        button.addEventListener("click", async () => {
+          const eventId = button.dataset.eventId;
+          const input = document.querySelector(`.actual-result-input[data-event-id="${cssEscape(eventId)}"]`);
+
+          try {
+            button.disabled = true;
+            await saveActualResult(eventId, input.value);
+            actualResultDrafts.delete(actualResultDraftKey(eventId));
+            button.textContent = "Update actual result";
+            const status = button.parentElement.querySelector(".actual-result-save-status");
+            if (status) {
+              status.textContent = "Actual result saved";
+              status.className = "save-status actual-result-save-status saved";
+            }
+          } catch (error) {
+            alert(error.message);
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+    }
+
+    function attachWinnerHandlers() {
+      document.querySelectorAll(".winner-select").forEach(select => {
+        select.addEventListener("change", async () => {
+          if (!select.value) return;
+
+          try {
+            await markWinner(select.dataset.eventId, select.value);
+          } catch (error) {
+            alert(error.message);
+          }
+        });
+      });
+    }
+
+    function getPlayerName(playerId) {
+      const player = players.find(item => item.id === playerId);
+      return player ? player.nickname || player.fullName || "Player" : "Player";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+
+    function cssEscape(value) {
+      if (window.CSS && CSS.escape) return CSS.escape(value);
+      return String(value).replace(/"/g, '\\"');
+    }
+
+    els.registerForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      showMessage(els.registerMessage, "");
+
+      try {
+        const credential = await createUserWithEmailAndPassword(
+          auth,
+          els.registerEmail.value.trim(),
+          els.registerPassword.value
+        );
+
+        await setDoc(doc(db, "players", credential.user.uid), {
+          fullName: els.registerFullName.value.trim(),
+          nickname: els.registerNickname.value.trim(),
+          email: els.registerEmail.value.trim().toLowerCase(),
+          active: true,
+          lifetimePoints: 0,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        showMessage(els.registerMessage, "Registered successfully.", "success");
+      } catch (error) {
+        showMessage(els.registerMessage, error.message, "error");
+      }
+    });
+
+    els.signInForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      showMessage(els.signInMessage, "");
+
+      try {
+        await signInWithEmailAndPassword(
+          auth,
+          els.signInEmail.value.trim(),
+          els.signInPassword.value
+        );
+      } catch (error) {
+        showMessage(els.signInMessage, error.message, "error");
+      }
+    });
+
+    els.signOutButton.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    els.withdrawButton.addEventListener("click", async () => {
+      if (!currentUser || !currentPlayer || isReadOnlyView()) return;
+
+      const newActiveState = currentPlayer.active === false;
+      await setDoc(doc(db, "players", currentUser.uid), {
+        active: newActiveState,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      currentPlayer.active = newActiveState;
+      render();
+    });
+
+    els.eventForm.addEventListener("input", () => {
+      eventFormDirty = true;
+      const myEvent = events.find(event => event.ownerPlayerId === (currentUser ? currentUser.uid : ""));
+      els.saveEventButton.textContent = myEvent ? "Update event" : "Save new event";
+      showMessage(els.eventMessage, myEvent ? "Unsaved changes. Press Update event to save them." : "Event not saved yet.", myEvent ? "error" : "");
+    });
+
+    els.tieBreakType.addEventListener("change", () => {
+      eventFormDirty = true;
+      toggleTieBreakDetails();
+    });
+
+    els.miniGameStartButton.addEventListener("click", startMiniGame);
+    els.miniGameStopButton.addEventListener("click", stopMiniGame);
+
+    window.addEventListener("keydown", event => {
+      if (event.code === "Space" && miniGameRunning) {
+        event.preventDefault();
+        stopMiniGame();
+      }
+    });
+
+    els.weekSelector.addEventListener("change", () => {
+      selectedWeekId = els.weekSelector.value;
+      eventFormDirty = false;
+      eventFormLoadedKey = null;
+      startEventsListener();
+      render();
+    });
+
+    els.latestWeekButton.addEventListener("click", async () => {
+      selectedWeekId = currentWeekId();
+      eventFormDirty = false;
+      eventFormLoadedKey = null;
+      await ensureWeekDocument();
+      startEventsListener();
+      renderWeekSelector();
+      render();
+    });
+
+    els.eventForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      showMessage(els.eventMessage, "");
+
+      if (!currentUser || !currentPlayer) return;
+
+      if (isReadOnlyView()) {
+        showMessage(els.eventMessage, "Previous weeks are read-only.", "error");
+        return;
+      }
+
+      if (isLockedNow()) {
+        showMessage(els.eventMessage, "Entries are locked for this week.", "error");
+        return;
+      }
+
+      if (!isEventTimeInsideWindow(els.eventStartAt.value)) {
+        showMessage(
+          els.eventMessage,
+          "The event must start between Friday 1700 and Monday 0800 New Zealand Time.",
+          "error"
+        );
+        return;
+      }
+
+      if (!els.predictionFormat.value.trim()) {
+        showMessage(els.eventMessage, "Please specify the prediction format.", "error");
+        return;
+      }
+
+      if (els.tieBreakType.value !== "none" && !els.tieBreakQuestion.value.trim()) {
+        showMessage(els.eventMessage, "Please specify the tie-break question or set tie-break to none.", "error");
+        return;
+      }
+
+      if (els.tieBreakType.value !== "none" && !els.tieBreakFormat.value.trim()) {
+        showMessage(els.eventMessage, "Please specify the tie-break format or set tie-break to none.", "error");
+        return;
+      }
+
+      try {
+        await ensureWeekDocument();
+        await setDoc(doc(db, "weeks", selectedWeekId, "events", currentUser.uid), {
+          ownerPlayerId: currentUser.uid,
+          ownerNickname: currentPlayer.nickname || currentPlayer.fullName,
+          sport: els.sport.value.trim(),
+          eventName: els.eventName.value.trim(),
+          eventLink: els.eventLink.value.trim(),
+          eventStartAt: els.eventStartAt.value,
+          challengeDescription: els.challengeDescription.value.trim(),
+          predictionFormat: els.predictionFormat.value.trim(),
+          tieBreakType: els.tieBreakType.value,
+          tieBreakQuestion: els.tieBreakType.value === "none" ? "" : els.tieBreakQuestion.value.trim(),
+          tieBreakFormat: els.tieBreakType.value === "none" ? "" : els.tieBreakFormat.value.trim(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        eventFormDirty = false;
+        eventFormLoadedKey = null;
+        els.saveEventButton.textContent = "Update saved event";
+        showMessage(els.eventMessage, "Event saved. Any further changes will update this event.", "success");
+      } catch (error) {
+        showMessage(els.eventMessage, error.message, "error");
+      }
+    });
+
+    onAuthStateChanged(auth, async user => {
+      currentUser = user;
+      currentPlayer = null;
+      stopRealtimeListeners();
+
+      if (!user) {
+        els.authCard.classList.remove("hidden");
+        els.playerCard.classList.add("hidden");
+        els.eventCard.classList.add("hidden");
+        els.gameCard.classList.add("hidden");
+        els.sportsmasterTieBreakCard.classList.add("hidden");
+        els.scoreCard.classList.add("hidden");
+        els.signedInActions.classList.add("hidden");
+        selectedWeekId = currentWeekId();
+        updateWeekDisplay();
+        return;
+      }
+
+      await ensureWeekDocument();
+      selectedWeekId = currentWeekId();
+      currentPlayer = await loadCurrentPlayer(user);
+
+      if (!currentPlayer) {
+        alert("Signed in, but no player profile was found.");
+        await signOut(auth);
+        return;
+      }
+
+      els.authCard.classList.add("hidden");
+      els.playerCard.classList.remove("hidden");
+      els.eventCard.classList.remove("hidden");
+      els.gameCard.classList.remove("hidden");
+      els.sportsmasterTieBreakCard.classList.remove("hidden");
+      els.scoreCard.classList.remove("hidden");
+      els.signedInActions.classList.remove("hidden");
+
+      startRealtimeListeners();
+      render();
+    });
+
+    selectedWeekId = currentWeekId();
+    toggleTieBreakDetails();
+    updateWeekDisplay();
+    setInterval(refreshWeekIfNeeded, 30000);
+  </script>
+</body>
+</html>
