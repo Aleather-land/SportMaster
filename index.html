@@ -609,6 +609,25 @@
       color: rgba(203, 213, 225, 0.72);
     }
 
+    .app-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .version-badge {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(203, 213, 225, 0.62);
+      border: 1px solid rgba(250, 204, 21, 0.18);
+      border-radius: 999px;
+      padding: 0.15rem 0.45rem;
+      background: rgba(15, 23, 42, 0.32);
+      white-space: nowrap;
+    }
+
     @media (max-width: 760px) {
       header { padding: 1rem; }
       main { padding: 1rem; }
@@ -623,7 +642,10 @@
   <header>
     <div class="header-inner">
       <div>
-        <h1>Sports Master</h1>
+        <div class="app-title-row">
+          <h1>Sports Master</h1>
+          <span class="version-badge">v2026.07.15.2</span>
+        </div>
         <div id="weekSummary">Loading...</div>
       </div>
 
@@ -748,7 +770,7 @@
               <option value="text">Tie-breaker</option>
               <option value="numeric">Stop the Timer</option>
             </select>
-            <span class="format-hint">Use this when the main prediction may not produce a clear winner. With a tie-breaker, identical main predictions are allowed, but the prediction plus tie-break answer must still be unique.</span>
+            <span class="format-hint">Use this when the main prediction may not produce a clear winner. Text tie-breakers use a separate tie-break answer. Stop the Timer uses each player's weekly timer result instead.</span>
           </label>
 
           <div id="tieBreakDetails" class="grid hidden">
@@ -1133,6 +1155,14 @@
       return event && event.tieBreakType && event.tieBreakType !== "none";
     }
 
+    function eventUsesStopTimerTieBreak(event) {
+      return event && event.tieBreakType === "numeric";
+    }
+
+    function eventUsesTextTieBreak(event) {
+      return eventHasTieBreak(event) && !eventUsesStopTimerTieBreak(event);
+    }
+
     function randomWholeSeconds(min, max) {
       const range = max - min + 1;
       if (window.crypto && crypto.getRandomValues) {
@@ -1171,11 +1201,11 @@
     }
 
     function toggleTieBreakDetails() {
-      const enabled = els.tieBreakType.value !== "none";
-      els.tieBreakDetails.classList.toggle("hidden", !enabled);
-      els.tieBreakQuestion.required = enabled;
-      els.tieBreakFormat.required = enabled;
-      if (!enabled) {
+      const needsTextDetails = els.tieBreakType.value === "text";
+      els.tieBreakDetails.classList.toggle("hidden", !needsTextDetails);
+      els.tieBreakQuestion.required = needsTextDetails;
+      els.tieBreakFormat.required = needsTextDetails;
+      if (!needsTextDetails) {
         els.tieBreakQuestion.value = "";
         els.tieBreakFormat.value = "";
       }
@@ -1396,9 +1426,11 @@
 
       const event = events.find(item => item.id === eventId);
       const clean = String(predictionValue || "").trim();
-      const cleanTieBreak = String(tieBreakAnswerValue || "").trim();
+      const cleanTieBreak = eventUsesTextTieBreak(event)
+        ? String(tieBreakAnswerValue || "").trim()
+        : "";
       if (!clean) throw new Error("Please enter a prediction.");
-      if (eventHasTieBreak(event) && !cleanTieBreak) throw new Error("Please enter a tie-break answer.");
+      if (eventUsesTextTieBreak(event) && !cleanTieBreak) throw new Error("Please enter a tie-break answer.");
 
       const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
       const predictionsRef = collection(eventRef, "predictions");
@@ -1406,22 +1438,32 @@
 
       await runTransaction(db, async transaction => {
         const predictionSnaps = await getDocs(predictionsRef);
-        const tieBreakEnabled = eventHasTieBreak(event);
+        const hasTieBreak = eventHasTieBreak(event);
+        const usesTextTieBreak = eventUsesTextTieBreak(event);
+        const usesStopTimerTieBreak = eventUsesStopTimerTieBreak(event);
         const duplicate = predictionSnaps.docs.some(predictionDoc => {
           if (predictionDoc.id === currentUser.uid) return false;
           const existing = predictionDoc.data();
           const samePrediction = normalisePrediction(existing.prediction) === normalisePrediction(clean);
 
-          if (!tieBreakEnabled) {
+          if (!hasTieBreak) {
             return samePrediction;
           }
 
-          const sameTieBreak = normalisePrediction(existing.tieBreakAnswer) === normalisePrediction(cleanTieBreak);
-          return samePrediction && sameTieBreak;
+          if (usesStopTimerTieBreak) {
+            return false;
+          }
+
+          if (usesTextTieBreak) {
+            const sameTieBreak = normalisePrediction(existing.tieBreakAnswer) === normalisePrediction(cleanTieBreak);
+            return samePrediction && sameTieBreak;
+          }
+
+          return false;
         });
 
         if (duplicate) {
-          if (tieBreakEnabled) {
+          if (usesTextTieBreak) {
             throw new Error("That prediction and tie-break answer combination has already been used for this event. Keep the main prediction if you want, but choose a different tie-break answer.");
           }
 
@@ -1453,6 +1495,9 @@
       if (!prediction) throw new Error("Winner prediction was not found.");
 
       const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
+      const winningTieBreakAnswer = eventUsesStopTimerTieBreak(event)
+        ? formatStopTimerAttemptForPlayer(winnerPlayerId)
+        : prediction.tieBreakAnswer || "";
 
       /*
         Important permission fix:
@@ -1474,7 +1519,7 @@
         transaction.set(eventRef, {
           winnerPlayerId,
           winningPrediction: prediction.prediction,
-          winningTieBreakAnswer: prediction.tieBreakAnswer || "",
+          winningTieBreakAnswer,
           completedAt: serverTimestamp()
         }, { merge: true });
       });
@@ -1602,6 +1647,7 @@
       captureTableDrafts();
       els.emptyGameNotice.classList.toggle("hidden", events.length > 0);
       const visiblePlayers = readOnly ? players : players.filter(player => player.active !== false);
+      const showPredictionInputRow = currentUser && currentPlayer && currentPlayer.active !== false && !readOnly && !locked;
 
       els.tableHead.innerHTML = `
         <tr>
@@ -1678,11 +1724,20 @@
         </tr>
       `);
 
+      if (showPredictionInputRow) {
+        rows.push(`
+          <tr class="prediction-entry-row">
+            <td>Prediction</td>
+            ${events.map(event => renderPredictionInputCell(event, locked)).join("")}
+          </tr>
+        `);
+      }
+
       for (const player of visiblePlayers) {
         rows.push(`
           <tr>
             <td>${escapeHtml(player.nickname || player.fullName || "Player")}</td>
-            ${events.map(event => renderPredictionCell(event, player, locked, readOnly)).join("")}
+            ${events.map(event => renderPredictionDisplayCell(event, player, readOnly)).join("")}
           </tr>
         `);
       }
@@ -1698,24 +1753,45 @@
         return `<td><span class="muted">None</span></td>`;
       }
 
-      const typeLabel = event.tieBreakType === "numeric" ? "Closest numeric answer" : "Tie-break answer";
+      if (eventUsesStopTimerTieBreak(event)) {
+        return `
+          <td>
+            <strong>Stop the Timer</strong><br />
+            <span class="format-hint">Uses each player's Sports Master Stop the Timer result for this week. No separate tie-break answer is required.</span>
+          </td>
+        `;
+      }
+
       return `
         <td>
-          <strong>${escapeHtml(typeLabel)}</strong><br />
+          <strong>Tie-break answer</strong><br />
           ${escapeHtml(event.tieBreakQuestion || "")}
           ${event.tieBreakFormat ? `<span class="format-hint">Format: ${escapeHtml(event.tieBreakFormat)}</span>` : ""}
         </td>
       `;
     }
 
-    function renderPredictionCell(event, player, locked, readOnly) {
+    function getPredictionForPlayer(event, playerId) {
       const predictions = predictionsByEvent[event.id] || [];
-      const existing = predictions.find(item => item.playerId === player.id);
-      const isMe = currentUser && player.id === currentUser.uid;
-      const winnerClass = event.winnerPlayerId === player.id ? "score-pill" : "";
-      const revealed = predictionsAreRevealed() || readOnly || Boolean(event.winnerPlayerId);
+      return predictions.find(item => item.playerId === playerId) || null;
+    }
+
+    function formatVisiblePrediction(event, prediction) {
+      if (!prediction) return "";
+      const tieBreakText = eventUsesTextTieBreak(event) && prediction.tieBreakAnswer
+        ? `<span class="format-hint">Tie-break: ${escapeHtml(prediction.tieBreakAnswer)}</span>`
+        : eventUsesStopTimerTieBreak(event)
+          ? `<span class="format-hint">Stop the Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}</span>`
+          : "";
+      return `${escapeHtml(prediction.prediction || "")}${tieBreakText}`;
+    }
+
+    function renderPredictionInputCell(event, locked) {
+      const existing = getPredictionForPlayer(event, currentUser.uid);
       const tieBreakEnabled = eventHasTieBreak(event);
-      const key = draftKey(event.id, player.id);
+      const usesTextTieBreak = eventUsesTextTieBreak(event);
+      const usesStopTimerTieBreak = eventUsesStopTimerTieBreak(event);
+      const key = draftKey(event.id, currentUser.uid);
       const savedPrediction = existing ? existing.prediction || "" : "";
       const savedTieBreak = existing ? existing.tieBreakAnswer || "" : "";
       const predictionValue = predictionDrafts.has(key)
@@ -1724,10 +1800,10 @@
       const tieBreakValue = tieBreakDrafts.has(key)
         ? tieBreakDrafts.get(key)
         : savedTieBreak;
-      const hasPredictionDraft = predictionDrafts.has(key) || tieBreakDrafts.has(key);
+      const hasPredictionDraft = predictionDrafts.has(key) || (usesTextTieBreak && tieBreakDrafts.has(key));
       const predictionHasUnsavedChanges = existing
-        ? predictionValue !== savedPrediction || tieBreakValue !== savedTieBreak
-        : hasPredictionDraft && (Boolean(predictionValue) || Boolean(tieBreakValue));
+        ? predictionValue !== savedPrediction || (usesTextTieBreak && tieBreakValue !== savedTieBreak)
+        : hasPredictionDraft && (Boolean(predictionValue) || (usesTextTieBreak && Boolean(tieBreakValue)));
       const predictionButtonLabel = existing ? "Update prediction" : "Save prediction";
       const predictionStatusText = existing
         ? predictionHasUnsavedChanges ? "Unsaved changes" : "Prediction saved"
@@ -1736,42 +1812,6 @@
         ? predictionHasUnsavedChanges ? "unsaved" : "saved"
         : predictionHasUnsavedChanges ? "unsaved" : "empty";
 
-      function formatVisiblePrediction(prediction) {
-        if (!prediction) return "";
-        const tieBreakText = tieBreakEnabled && prediction.tieBreakAnswer
-          ? `<span class="format-hint">Tie-break: ${escapeHtml(prediction.tieBreakAnswer)}</span>`
-          : "";
-        return `${escapeHtml(prediction.prediction || "")}${tieBreakText}`;
-      }
-
-      if (!isMe) {
-        let displayValue = "";
-
-        if (existing) {
-          displayValue = revealed
-            ? formatVisiblePrediction(existing)
-            : "Prediction submitted";
-        }
-
-        return `
-          <td>
-            <span class="${winnerClass}">
-              ${displayValue}
-            </span>
-          </td>
-        `;
-      }
-
-      if (readOnly || revealed) {
-        return `
-          <td>
-            <span class="${winnerClass}">
-              ${formatVisiblePrediction(existing)}
-            </span>
-          </td>
-        `;
-      }
-
       return `
         <td>
           <div class="prediction-cell">
@@ -1779,19 +1819,21 @@
               data-event-id="${escapeAttr(event.id)}"
               class="prediction-input"
               value="${escapeAttr(predictionValue)}" 
-              placeholder="${escapeAttr(event.predictionFormat || "Your prediction")}"
+              placeholder="${escapeAttr(event.predictionFormat || "Your prediction")}" 
               ${locked ? "disabled" : ""}
             />
             ${event.predictionFormat ? `<span class="format-hint">Format: ${escapeHtml(event.predictionFormat)}</span>` : ""}
-            ${tieBreakEnabled ? `
+            ${usesTextTieBreak ? `
               <input
                 data-event-id="${escapeAttr(event.id)}"
                 class="tie-break-answer-input"
                 value="${escapeAttr(tieBreakValue)}"
-                placeholder="${escapeAttr(event.tieBreakFormat || "Tie-break answer")}"
+                placeholder="${escapeAttr(event.tieBreakFormat || "Tie-break answer")}" 
                 ${locked ? "disabled" : ""}
               />
               <span class="format-hint">Tie-break: ${escapeHtml(event.tieBreakQuestion || "")}${event.tieBreakFormat ? ` Format: ${escapeHtml(event.tieBreakFormat)}` : ""}</span>
+            ` : usesStopTimerTieBreak ? `
+              <span class="format-hint">Tie-break: Stop the Timer. Your timer result for this week will be used, so no extra tie-break answer is needed.</span>
             ` : ""}
             <button
               class="small save-prediction-button"
@@ -1802,6 +1844,28 @@
             </button>
             <span class="save-status prediction-save-status ${predictionStatusClass}">${escapeHtml(predictionStatusText)}</span>
           </div>
+        </td>
+      `;
+    }
+
+    function renderPredictionDisplayCell(event, player, readOnly) {
+      const existing = getPredictionForPlayer(event, player.id);
+      const isMe = currentUser && player.id === currentUser.uid;
+      const winnerClass = event.winnerPlayerId === player.id ? "score-pill" : "";
+      const revealed = predictionsAreRevealed() || readOnly || Boolean(event.winnerPlayerId);
+
+      let displayValue = "";
+      if (existing) {
+        displayValue = (revealed || isMe)
+          ? formatVisiblePrediction(event, existing)
+          : "Prediction submitted";
+      }
+
+      return `
+        <td>
+          <span class="${winnerClass}">
+            ${displayValue}
+          </span>
         </td>
       `;
     }
@@ -1869,16 +1933,26 @@
           <option value="">Choose winner...</option>
           ${predictions.map(prediction => `
             <option value="${escapeAttr(prediction.playerId)}">
-              ${escapeHtml(prediction.playerNickname || getPlayerName(prediction.playerId))}: ${escapeHtml(prediction.prediction)}${prediction.tieBreakAnswer ? ` | TB: ${escapeHtml(prediction.tieBreakAnswer)}` : ""}
+              ${escapeHtml(prediction.playerNickname || getPlayerName(prediction.playerId))}: ${escapeHtml(prediction.prediction)}${eventUsesTextTieBreak(event) && prediction.tieBreakAnswer ? ` | TB: ${escapeHtml(prediction.tieBreakAnswer)}` : ""}${eventUsesStopTimerTieBreak(event) ? ` | Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}` : ""}
             </option>
           `).join("")}
         </select>
       `;
     }
 
+    function getSportsmasterTieBreakAttemptForPlayer(playerId) {
+      return sportsmasterTieBreakAttempts.find(attempt => attempt.playerId === playerId || attempt.id === playerId) || null;
+    }
+
+    function formatStopTimerAttemptForPlayer(playerId) {
+      const attempt = getSportsmasterTieBreakAttemptForPlayer(playerId);
+      if (!attempt) return "not played";
+      return `${Number(attempt.resultSeconds || 0).toFixed(3)}s, diff ${Number(attempt.differenceSeconds || 0).toFixed(3)}s`;
+    }
+
     function getMySportsmasterTieBreakAttempt() {
       if (!currentUser) return null;
-      return sportsmasterTieBreakAttempts.find(attempt => attempt.playerId === currentUser.uid || attempt.id === currentUser.uid) || null;
+      return getSportsmasterTieBreakAttemptForPlayer(currentUser.uid);
     }
 
     async function saveSportsmasterTieBreakAttempt(elapsedSeconds) {
@@ -2336,12 +2410,12 @@
         return;
       }
 
-      if (els.tieBreakType.value !== "none" && !els.tieBreakQuestion.value.trim()) {
+      if (els.tieBreakType.value === "text" && !els.tieBreakQuestion.value.trim()) {
         showMessage(els.eventMessage, "Please specify the tie-break question or set tie-break to none.", "error");
         return;
       }
 
-      if (els.tieBreakType.value !== "none" && !els.tieBreakFormat.value.trim()) {
+      if (els.tieBreakType.value === "text" && !els.tieBreakFormat.value.trim()) {
         showMessage(els.eventMessage, "Please specify the tie-break format or set tie-break to none.", "error");
         return;
       }
@@ -2358,8 +2432,8 @@
           challengeDescription: els.challengeDescription.value.trim(),
           predictionFormat: els.predictionFormat.value.trim(),
           tieBreakType: els.tieBreakType.value,
-          tieBreakQuestion: els.tieBreakType.value === "none" ? "" : els.tieBreakQuestion.value.trim(),
-          tieBreakFormat: els.tieBreakType.value === "none" ? "" : els.tieBreakFormat.value.trim(),
+          tieBreakQuestion: els.tieBreakType.value === "text" ? els.tieBreakQuestion.value.trim() : "",
+          tieBreakFormat: els.tieBreakType.value === "text" ? els.tieBreakFormat.value.trim() : "",
           updatedAt: serverTimestamp()
         }, { merge: true });
 
