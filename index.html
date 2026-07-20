@@ -644,12 +644,13 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.07.15.2</span>
+          <span class="version-badge">v2026.07.20.1</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
 
       <div id="signedInActions" class="hidden">
+        <span id="adminBadge" class="status complete hidden">Admin</span>
         <button id="signOutButton" class="secondary">Sign out</button>
       </div>
     </div>
@@ -914,6 +915,7 @@
 
     let currentUser = null;
     let currentPlayer = null;
+    let currentIsAdmin = false;
     let players = [];
     let weeks = [];
     let events = [];
@@ -938,6 +940,7 @@
     const els = {
       weekSummary: document.querySelector("#weekSummary"),
       signedInActions: document.querySelector("#signedInActions"),
+      adminBadge: document.querySelector("#adminBadge"),
       signOutButton: document.querySelector("#signOutButton"),
 
       authCard: document.querySelector("#authCard"),
@@ -1223,11 +1226,13 @@
         <span> Current week: ${info.weekId}. Event window: ${info.windowLabel}.</span>
       `;
 
-      els.lockMessage.textContent = readOnly
-        ? `Viewing week ${selectedWeekId}. Event entries and predictions are read-only. Missing winners and actual results can still be saved by the event owner.`
-        : locked
-          ? "Entries are locked. Winner selection and actual result entry are now open for event owners."
-          : `Entries are open until ${info.lockLabel}. Winner selection and actual result entry open after Friday at 1700 New Zealand Time.`;
+      els.lockMessage.textContent = currentIsAdmin
+        ? `Admin mode: viewing week ${selectedWeekId}. You can update actual results and winners for any event.`
+        : readOnly
+          ? `Viewing week ${selectedWeekId}. Event entries and predictions are read-only. Missing winners and actual results can still be saved by the event owner.`
+          : locked
+            ? "Entries are locked. Winner selection and actual result entry are now open for event owners."
+            : `Entries are open until ${info.lockLabel}. Winner selection and actual result entry open after Friday at 1700 New Zealand Time.`;
 
       els.statusBadge.textContent = readOnly ? "Read-only" : locked ? "Locked" : "Open";
       els.statusBadge.className = readOnly ? "status complete" : locked ? "status locked" : "status";
@@ -1262,6 +1267,24 @@
       const snap = await getDoc(doc(db, "players", user.uid));
       if (!snap.exists()) return null;
       return { id: user.uid, ...snap.data() };
+    }
+
+    async function loadCurrentAdminStatus(user) {
+      if (!user) return false;
+      const snap = await getDoc(doc(db, "admins", user.uid));
+      return snap.exists() && snap.data().active === true;
+    }
+
+    function canManageEvent(event) {
+      return Boolean(
+        currentUser &&
+        event &&
+        (currentIsAdmin || event.ownerPlayerId === currentUser.uid)
+      );
+    }
+
+    function canEditResultsForEvent(event) {
+      return canManageEvent(event) && (currentIsAdmin || winnerSelectionIsOpen());
     }
 
     function startRealtimeListeners() {
@@ -1482,13 +1505,10 @@
 
     async function markWinner(eventId, winnerPlayerId) {
       if (!currentUser) return;
-      if (!winnerSelectionIsOpen()) {
-        throw new Error("Winner selection opens after Friday at 1700 New Zealand Time.");
-      }
 
       const event = events.find(item => item.id === eventId);
-      if (!event || event.ownerPlayerId !== currentUser.uid) {
-        throw new Error("Only the player who created this event can mark the winner.");
+      if (!canEditResultsForEvent(event)) {
+        throw new Error("Only the event owner can select the winner after Friday 1700 NZT. Admins can manage any event.");
       }
 
       const prediction = (predictionsByEvent[eventId] || []).find(item => item.playerId === winnerPlayerId);
@@ -1499,28 +1519,23 @@
         ? formatStopTimerAttemptForPlayer(winnerPlayerId)
         : prediction.tieBreakAnswer || "";
 
-      /*
-        Important permission fix:
-        Do not update players/{winnerPlayerId} here.
-
-        Normal players usually only have permission to edit their own player document.
-        The old version tried to increment lifetimePoints on the winner's player document.
-        That meant selecting yourself worked, but selecting another player could fail with
-        "insufficient permissions".
-
-        The leaderboard already calculates totals from the completed event documents,
-        so writing the winner to the event document is enough.
-      */
       await runTransaction(db, async transaction => {
         const eventSnap = await transaction.get(eventRef);
         if (!eventSnap.exists()) throw new Error("Event was not found.");
-        if (eventSnap.data().winnerPlayerId) throw new Error("A winner has already been recorded for this event.");
+
+        const existingWinner = eventSnap.data().winnerPlayerId;
+        if (existingWinner && !currentIsAdmin) {
+          throw new Error("A winner has already been recorded for this event. Ask an admin to change it.");
+        }
 
         transaction.set(eventRef, {
           winnerPlayerId,
           winningPrediction: prediction.prediction,
           winningTieBreakAnswer,
-          completedAt: serverTimestamp()
+          completedAt: serverTimestamp(),
+          winnerUpdatedAt: serverTimestamp(),
+          winnerUpdatedBy: currentUser.uid,
+          winnerUpdatedByAdmin: currentIsAdmin === true
         }, { merge: true });
       });
 
@@ -1529,13 +1544,10 @@
 
     async function saveActualResult(eventId, actualResultValue) {
       if (!currentUser) return;
-      if (!winnerSelectionIsOpen()) {
-        throw new Error("Actual result entry opens after Friday at 1700 New Zealand Time.");
-      }
 
       const event = events.find(item => item.id === eventId);
-      if (!event || event.ownerPlayerId !== currentUser.uid) {
-        throw new Error("Only the player who created this event can save the actual result.");
+      if (!canEditResultsForEvent(event)) {
+        throw new Error("Only the event owner can save the actual result after Friday 1700 NZT. Admins can manage any event.");
       }
 
       const cleanResult = String(actualResultValue || "").trim();
@@ -1543,7 +1555,9 @@
 
       await setDoc(doc(db, "weeks", selectedWeekId, "events", eventId), {
         actualResult: cleanResult,
-        resultUpdatedAt: serverTimestamp()
+        resultUpdatedAt: serverTimestamp(),
+        resultUpdatedBy: currentUser.uid,
+        resultUpdatedByAdmin: currentIsAdmin === true
       }, { merge: true });
     }
 
@@ -1552,10 +1566,13 @@
 
       if (!currentUser || !currentPlayer) return;
 
-      els.welcomeTitle.textContent = `Welcome, ${currentPlayer.nickname || currentPlayer.fullName}`;
-      els.playerStatus.textContent = currentPlayer.active === false
-        ? "You are currently withdrawn."
-        : "You are active for the weekly challenge.";
+      els.welcomeTitle.textContent = `Welcome, ${currentPlayer.nickname || currentPlayer.fullName}${currentIsAdmin ? " (admin)" : ""}`;
+      els.playerStatus.textContent = currentIsAdmin
+        ? "Admin mode is active. You can manage actual results and winners for any event."
+        : currentPlayer.active === false
+          ? "You are currently withdrawn."
+          : "You are active for the weekly challenge.";
+      if (els.adminBadge) els.adminBadge.classList.toggle("hidden", !currentIsAdmin);
 
       els.withdrawButton.textContent = currentPlayer.active === false
         ? "Rejoin this week"
@@ -1714,13 +1731,7 @@
       rows.push(`
         <tr>
           <td>Winner</td>
-          ${events.map(event => `
-            <td>
-              ${event.winnerPlayerId
-                ? `<span class="score-pill">${escapeHtml(getPlayerName(event.winnerPlayerId))}: ${escapeHtml(event.winningPrediction || "")}${event.winningTieBreakAnswer ? ` | TB: ${escapeHtml(event.winningTieBreakAnswer)}` : ""}</span>`
-                : renderWinnerSelect(event, readOnly)}
-            </td>
-          `).join("")}
+          ${events.map(event => renderWinnerCell(event, readOnly)).join("")}
         </tr>
       `);
 
@@ -1871,10 +1882,7 @@
     }
 
     function renderActualResultCell(event) {
-      const canEditResult =
-        currentUser &&
-        event.ownerPlayerId === currentUser.uid &&
-        winnerSelectionIsOpen();
+      const canEditResult = canEditResultsForEvent(event);
 
       if (!canEditResult) {
         return `<td>${event.actualResult ? escapeHtml(event.actualResult) : `<span class="muted">Pending</span>`}</td>`;
@@ -1916,12 +1924,28 @@
       `;
     }
 
-    function renderWinnerSelect(event, readOnly) {
-      if (!currentUser || event.ownerPlayerId !== currentUser.uid) {
-        return `<span class="muted">Pending</span>`;
+    function renderWinnerCell(event, readOnly) {
+      const savedWinner = event.winnerPlayerId
+        ? `<span class="score-pill">${escapeHtml(getPlayerName(event.winnerPlayerId))}: ${escapeHtml(event.winningPrediction || "")}${event.winningTieBreakAnswer ? ` | TB: ${escapeHtml(event.winningTieBreakAnswer)}` : ""}</span>`
+        : "";
+
+      const canEditWinner = canEditResultsForEvent(event);
+      if (!canEditWinner) {
+        return `<td>${savedWinner || `<span class="muted">Pending</span>`}</td>`;
       }
 
-      if (!winnerSelectionIsOpen()) {
+      const selector = renderWinnerSelect(event, readOnly);
+      return `<td>${savedWinner ? `${savedWinner}<span class="format-hint">${currentIsAdmin ? "Admin override available below." : "Winner already selected."}</span>` : ""}${selector}</td>`;
+    }
+
+    function renderWinnerSelect(event, readOnly) {
+      if (!canEditResultsForEvent(event)) {
+        return currentIsAdmin
+          ? `<span class="muted">Admin result controls unavailable.</span>`
+          : `<span class="muted">Pending</span>`;
+      }
+
+      if (!currentIsAdmin && !winnerSelectionIsOpen()) {
         return `<span class="muted">Winner selection opens after Friday 1700 NZT</span>`;
       }
 
@@ -1930,9 +1954,9 @@
 
       return `
         <select class="winner-select" data-event-id="${escapeAttr(event.id)}">
-          <option value="">Choose winner...</option>
+          <option value="">${event.winnerPlayerId ? "Change winner..." : "Choose winner..."}</option>
           ${predictions.map(prediction => `
-            <option value="${escapeAttr(prediction.playerId)}">
+            <option value="${escapeAttr(prediction.playerId)}" ${event.winnerPlayerId === prediction.playerId ? "selected" : ""}>
               ${escapeHtml(prediction.playerNickname || getPlayerName(prediction.playerId))}: ${escapeHtml(prediction.prediction)}${eventUsesTextTieBreak(event) && prediction.tieBreakAnswer ? ` | TB: ${escapeHtml(prediction.tieBreakAnswer)}` : ""}${eventUsesStopTimerTieBreak(event) ? ` | Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}` : ""}
             </option>
           `).join("")}
@@ -2449,6 +2473,8 @@
     onAuthStateChanged(auth, async user => {
       currentUser = user;
       currentPlayer = null;
+      currentIsAdmin = false;
+      if (els.adminBadge) els.adminBadge.classList.add("hidden");
       stopRealtimeListeners();
 
       if (!user) {
@@ -2467,9 +2493,10 @@
       await ensureWeekDocument();
       selectedWeekId = currentWeekId();
       currentPlayer = await loadCurrentPlayer(user);
+      currentIsAdmin = await loadCurrentAdminStatus(user);
 
       if (!currentPlayer) {
-        alert("Signed in, but no player profile was found.");
+        alert("Signed in, but no player profile was found. Admins must also have a player profile.");
         await signOut(auth);
         return;
       }
