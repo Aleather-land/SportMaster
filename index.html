@@ -644,7 +644,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.07.20.1</span>
+          <span class="version-badge">v2026.07.20.2</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -810,7 +810,7 @@
       </div>
 
       <div id="historyNotice" class="notice warn hidden">
-        You are viewing a previous week. Event entries and predictions are read-only, but event owners can still select missing winners and add actual results.
+        You are viewing a previous week. Event entries and predictions are read-only. After the Friday deadline, event owners and admins can select missing winners and add actual results.
       </div>
 
       <div id="emptyGameNotice" class="notice hidden">
@@ -867,7 +867,7 @@
         <li>Identical main predictions are only allowed when that event has a tie-breaker. Without a tie-breaker, predictions must be unique.</li>
         <li>The winner of each event category gets one point. Everyone else gets zero for that category.</li>
         <li>Players may withdraw from the weekly game if they choose.</li>
-        <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only, but event owners can still select missing winners and add actual results.</li>
+        <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only. After the Friday deadline, event owners and admins can select missing winners and add actual results.</li>
         <li>The Sports Master weekly tie-break game can be used if the overall weekly points table is tied.</li>
       </ol>
     </section>
@@ -1284,7 +1284,7 @@
     }
 
     function canEditResultsForEvent(event) {
-      return canManageEvent(event) && (currentIsAdmin || winnerSelectionIsOpen());
+      return canManageEvent(event) && winnerSelectionIsOpen();
     }
 
     function startRealtimeListeners() {
@@ -1508,7 +1508,7 @@
 
       const event = events.find(item => item.id === eventId);
       if (!canEditResultsForEvent(event)) {
-        throw new Error("Only the event owner can select the winner after Friday 1700 NZT. Admins can manage any event.");
+        throw new Error("Only the event owner or an admin can select the winner after Friday 1700 NZT.");
       }
 
       const prediction = (predictionsByEvent[eventId] || []).find(item => item.playerId === winnerPlayerId);
@@ -1547,7 +1547,7 @@
 
       const event = events.find(item => item.id === eventId);
       if (!canEditResultsForEvent(event)) {
-        throw new Error("Only the event owner can save the actual result after Friday 1700 NZT. Admins can manage any event.");
+        throw new Error("Only the event owner or an admin can save the actual result after Friday 1700 NZT.");
       }
 
       const cleanResult = String(actualResultValue || "").trim();
@@ -1935,13 +1935,13 @@
       }
 
       const selector = renderWinnerSelect(event, readOnly);
-      return `<td>${savedWinner ? `${savedWinner}<span class="format-hint">${currentIsAdmin ? "Admin override available below." : "Winner already selected."}</span>` : ""}${selector}</td>`;
+      return `<td>${savedWinner ? `${savedWinner}<span class="format-hint">${currentIsAdmin ? "Admin override available after deadline." : "Winner already selected."}</span>` : ""}${selector}</td>`;
     }
 
     function renderWinnerSelect(event, readOnly) {
       if (!canEditResultsForEvent(event)) {
         return currentIsAdmin
-          ? `<span class="muted">Admin result controls unavailable.</span>`
+          ? `<span class="muted">Admin controls open after Friday 1700 NZT.</span>`
           : `<span class="muted">Pending</span>`;
       }
 
