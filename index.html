@@ -293,6 +293,18 @@
       color: var(--muted);
     }
 
+    .actual-result-display {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: #fef3c7;
+      font-weight: 900;
+    }
+
+    .actual-result-display .muted {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
     .tie-break-options {
       border: 1px solid var(--line);
       border-radius: 0.85rem;
@@ -644,7 +656,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.07.27.1</span>
+          <span class="version-badge">v2026.07.27.2</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -1135,19 +1147,29 @@
     function captureTableDrafts() {
       if (!currentUser) return;
 
+      /*
+        The table is rebuilt whenever Firestore sends fresh data. When the user
+        changes week, selectedWeekId changes before the old table has been
+        removed. Without checking data-week-id, old inputs could be captured as
+        drafts for the newly selected week. That made old actual results appear
+        in the wrong week and show as unsaved changes.
+      */
       document.querySelectorAll(".prediction-input").forEach(input => {
+        if (input.dataset.weekId !== selectedWeekId) return;
         if (input.dataset.eventId) {
           predictionDrafts.set(draftKey(input.dataset.eventId), input.value);
         }
       });
 
       document.querySelectorAll(".tie-break-answer-input").forEach(input => {
+        if (input.dataset.weekId !== selectedWeekId) return;
         if (input.dataset.eventId) {
           tieBreakDrafts.set(draftKey(input.dataset.eventId), input.value);
         }
       });
 
       document.querySelectorAll(".actual-result-input").forEach(input => {
+        if (input.dataset.weekId !== selectedWeekId) return;
         if (input.dataset.eventId) {
           actualResultDrafts.set(actualResultDraftKey(input.dataset.eventId), input.value);
         }
@@ -1828,6 +1850,7 @@
           <div class="prediction-cell">
             <input
               data-event-id="${escapeAttr(event.id)}"
+              data-week-id="${escapeAttr(selectedWeekId)}"
               class="prediction-input"
               value="${escapeAttr(predictionValue)}" 
               placeholder="${escapeAttr(event.predictionFormat || "Your prediction")}" 
@@ -1837,6 +1860,7 @@
             ${usesTextTieBreak ? `
               <input
                 data-event-id="${escapeAttr(event.id)}"
+                data-week-id="${escapeAttr(selectedWeekId)}"
                 class="tie-break-answer-input"
                 value="${escapeAttr(tieBreakValue)}"
                 placeholder="${escapeAttr(event.tieBreakFormat || "Tie-break answer")}" 
@@ -1912,6 +1936,7 @@
             <input
               class="actual-result-input"
               data-event-id="${escapeAttr(event.id)}"
+              data-week-id="${escapeAttr(selectedWeekId)}"
               value="${escapeAttr(actualResultValue)}"
               placeholder="Actual result, e.g. Hurricanes 20, Chiefs 12"
             />
@@ -2189,6 +2214,7 @@
     function attachPredictionHandlers() {
       document.querySelectorAll(".prediction-input").forEach(input => {
         input.addEventListener("input", () => {
+          if (input.dataset.weekId !== selectedWeekId) return;
           if (input.dataset.eventId) {
             predictionDrafts.set(draftKey(input.dataset.eventId), input.value);
             markPredictionInputUnsaved(input);
@@ -2198,6 +2224,7 @@
 
       document.querySelectorAll(".tie-break-answer-input").forEach(input => {
         input.addEventListener("input", () => {
+          if (input.dataset.weekId !== selectedWeekId) return;
           if (input.dataset.eventId) {
             tieBreakDrafts.set(draftKey(input.dataset.eventId), input.value);
             markPredictionInputUnsaved(input);
@@ -2234,6 +2261,7 @@
     function attachResultHandlers() {
       document.querySelectorAll(".actual-result-input").forEach(input => {
         input.addEventListener("input", () => {
+          if (input.dataset.weekId !== selectedWeekId) return;
           if (input.dataset.eventId) {
             actualResultDrafts.set(actualResultDraftKey(input.dataset.eventId), input.value);
             const cell = input.closest(".result-cell");
