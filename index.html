@@ -644,7 +644,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.07.20.2</span>
+          <span class="version-badge">v2026.07.27.1</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -1883,13 +1883,16 @@
 
     function renderActualResultCell(event) {
       const canEditResult = canEditResultsForEvent(event);
+      const savedActualResult = event.actualResult || "";
+      const displayResult = savedActualResult
+        ? `<strong>Current result:</strong> ${escapeHtml(savedActualResult)}`
+        : `<span class="muted">Pending</span>`;
 
       if (!canEditResult) {
-        return `<td>${event.actualResult ? escapeHtml(event.actualResult) : `<span class="muted">Pending</span>`}</td>`;
+        return `<td>${displayResult}</td>`;
       }
 
       const key = actualResultDraftKey(event.id);
-      const savedActualResult = event.actualResult || "";
       const actualResultValue = actualResultDrafts.has(key)
         ? actualResultDrafts.get(key)
         : savedActualResult;
@@ -1905,6 +1908,7 @@
       return `
         <td>
           <div class="result-cell">
+            <div class="format-hint actual-result-display">${displayResult}</div>
             <input
               class="actual-result-input"
               data-event-id="${escapeAttr(event.id)}"
