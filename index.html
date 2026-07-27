@@ -656,7 +656,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.07.27.2</span>
+          <span class="version-badge">v2026.07.27.3</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -1909,7 +1909,7 @@
       const canEditResult = canEditResultsForEvent(event);
       const savedActualResult = event.actualResult || "";
       const displayResult = savedActualResult
-        ? `<strong>Current result:</strong> ${escapeHtml(savedActualResult)}`
+        ? `<strong>Result:</strong> ${escapeHtml(savedActualResult)}`
         : `<span class="muted">Pending</span>`;
 
       if (!canEditResult) {
