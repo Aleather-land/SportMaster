@@ -656,7 +656,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.07.27.3</span>
+          <span class="version-badge">v2026.07.30.3</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -781,9 +781,9 @@
             <select id="tieBreakType">
               <option value="none">None</option>
               <option value="text">Tie-breaker</option>
-              <option value="numeric">Stop the Timer</option>
+              <option value="numeric">Flash Timer</option>
             </select>
-            <span class="format-hint">Use this when the main prediction may not produce a clear winner. Text tie-breakers use a separate tie-break answer. Stop the Timer uses each player's weekly timer result instead.</span>
+            <span class="format-hint">Use this when the main prediction may not produce a clear winner. Text tie-breakers use a separate tie-break answer. Flash Timer gives each player a random target between 4.000 and 10.000 seconds when they press Start.</span>
           </label>
 
           <div id="tieBreakDetails" class="grid hidden">
@@ -840,17 +840,18 @@
     <section id="sportsmasterTieBreakCard" class="card hidden">
       <div class="toolbar">
         <div>
-          <h2>Sports Master weekly tie-breaker - Stop the Timer</h2>
-          <p class="muted">When the weekly winner is tied - Stop the Timer</p>
+          <h2>Sports Master weekly tie-breaker - Flash Timer</h2>
+          <p class="muted">When the weekly winner is tied, each player presses Start, sees their own millisecond-precision random target between 4.000 and 10.000 seconds, then presses Stop when they think that time has passed. Closest wins.</p>
         </div>
         <span id="miniGameStatus" class="status">Ready</span>
       </div>
 
       <div class="mini-game-panel">
-        <div id="miniGameTarget" class="mini-game-target">Target: loading...</div>
-        <div class="muted">Click start, then press SPACE or click stop when you think you've reached the target. The timer is hidden while you play. Closest wins.</div>
+        <div id="miniGameTarget" class="mini-game-target">Target: press Start to reveal your target</div>
+        <div class="muted">Each player gets one attempt for the selected week. Your target is randomly chosen to the nearest millisecond when you press Start, then the timer is hidden. Press SPACE or Stop when you think your target time has passed.</div>
+        <input id="miniGamePickInput" type="hidden" />
         <div>
-          <button id="miniGameStartButton" type="button">Start tie-breaker</button>
+          <button id="miniGameStartButton" type="button">Start flash timer</button>
           <button id="miniGameStopButton" type="button" class="secondary" disabled>Stop</button>
         </div>
         <div id="miniGameMessage" class="mini-game-result"></div>
@@ -880,7 +881,7 @@
         <li>The winner of each event category gets one point. Everyone else gets zero for that category.</li>
         <li>Players may withdraw from the weekly game if they choose.</li>
         <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only. After the Friday deadline, event owners and admins can select missing winners and add actual results.</li>
-        <li>The Sports Master weekly tie-break game can be used if the overall weekly points table is tied.</li>
+        <li>The Sports Master Flash Timer tie-break can be used if the overall weekly points table is tied.</li>
       </ol>
     </section>
   </main>
@@ -1002,6 +1003,7 @@
       tableBody: document.querySelector("#tableBody"),
       miniGameStatus: document.querySelector("#miniGameStatus"),
       miniGameTarget: document.querySelector("#miniGameTarget"),
+      miniGamePickInput: document.querySelector("#miniGamePickInput"),
       miniGameStartButton: document.querySelector("#miniGameStartButton"),
       miniGameStopButton: document.querySelector("#miniGameStopButton"),
       miniGameMessage: document.querySelector("#miniGameMessage"),
@@ -1198,6 +1200,20 @@
       return min + Math.floor(Math.random() * range);
     }
 
+    function randomMillisecondTargetSeconds(minSeconds, maxSeconds) {
+      const minMs = Math.round(minSeconds * 1000);
+      const maxMs = Math.round(maxSeconds * 1000);
+      const range = maxMs - minMs + 1;
+
+      if (window.crypto && crypto.getRandomValues) {
+        const values = new Uint32Array(1);
+        crypto.getRandomValues(values);
+        return Number(((minMs + (values[0] % range)) / 1000).toFixed(3));
+      }
+
+      return Number(((minMs + Math.floor(Math.random() * range)) / 1000).toFixed(3));
+    }
+
     function deterministicWholeSecondsFromWeek(weekId, min = 5, max = 12) {
       const text = String(weekId || "sports-master");
       let hash = 0;
@@ -1371,16 +1387,9 @@
     }
 
     async function ensureSelectedWeekTieBreakTarget() {
-      if (!selectedWeekId) return;
-
-      try {
-        const weekRef = doc(db, "weeks", selectedWeekId);
-        const snap = await getDoc(weekRef);
-        const existingTarget = snap.exists() ? snap.data().sportsmasterTieBreakTarget : null;
-        sportsmasterTieBreakTarget = existingTarget || deterministicWholeSecondsFromWeek(selectedWeekId, 5, 12);
-      } catch (error) {
-        sportsmasterTieBreakTarget = deterministicWholeSecondsFromWeek(selectedWeekId, 5, 12);
-      }
+      // Flash Timer targets are generated per player when they press Start.
+      // There is no shared weekly target to prepare or reveal.
+      sportsmasterTieBreakTarget = null;
     }
 
     async function startSportsmasterTieBreakListener() {
@@ -1789,8 +1798,8 @@
       if (eventUsesStopTimerTieBreak(event)) {
         return `
           <td>
-            <strong>Stop the Timer</strong><br />
-            <span class="format-hint">Uses each player's Sports Master Stop the Timer result for this week. No separate tie-break answer is required.</span>
+            <strong>Flash Timer</strong><br />
+            <span class="format-hint">Uses each player's Sports Master Flash Timer result for this week. No separate tie-break answer is required.</span>
           </td>
         `;
       }
@@ -1814,7 +1823,7 @@
       const tieBreakText = eventUsesTextTieBreak(event) && prediction.tieBreakAnswer
         ? `<span class="format-hint">Tie-break: ${escapeHtml(prediction.tieBreakAnswer)}</span>`
         : eventUsesStopTimerTieBreak(event)
-          ? `<span class="format-hint">Stop the Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}</span>`
+          ? `<span class="format-hint">Flash Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}</span>`
           : "";
       return `${escapeHtml(prediction.prediction || "")}${tieBreakText}`;
     }
@@ -1868,7 +1877,7 @@
               />
               <span class="format-hint">Tie-break: ${escapeHtml(event.tieBreakQuestion || "")}${event.tieBreakFormat ? ` Format: ${escapeHtml(event.tieBreakFormat)}` : ""}</span>
             ` : usesStopTimerTieBreak ? `
-              <span class="format-hint">Tie-break: Stop the Timer. Your timer result for this week will be used, so no extra tie-break answer is needed.</span>
+              <span class="format-hint">Tie-break: Flash Timer. Your weekly Flash Timer attempt will be used, so no extra tie-break answer is needed.</span>
             ` : ""}
             <button
               class="small save-prediction-button"
@@ -1909,7 +1918,7 @@
       const canEditResult = canEditResultsForEvent(event);
       const savedActualResult = event.actualResult || "";
       const displayResult = savedActualResult
-        ? `<strong>Result:</strong> ${escapeHtml(savedActualResult)}`
+        ? `<strong>Current result:</strong> ${escapeHtml(savedActualResult)}`
         : `<span class="muted">Pending</span>`;
 
       if (!canEditResult) {
@@ -1997,10 +2006,23 @@
       return sportsmasterTieBreakAttempts.find(attempt => attempt.playerId === playerId || attempt.id === playerId) || null;
     }
 
+    function getFlashTimerDifference(attempt) {
+      if (!attempt || attempt.status !== "completed") return null;
+      return Number(attempt.differenceSeconds ?? Math.abs(Number(attempt.resultSeconds || 0) - Number(attempt.targetSeconds || 0)).toFixed(3));
+    }
+
     function formatStopTimerAttemptForPlayer(playerId) {
       const attempt = getSportsmasterTieBreakAttemptForPlayer(playerId);
       if (!attempt) return "not played";
-      return `${Number(attempt.resultSeconds || 0).toFixed(3)}s, diff ${Number(attempt.differenceSeconds || 0).toFixed(3)}s`;
+
+      if (attempt.status === "started" && !attempt.resultSeconds) {
+        return `target ${Number(attempt.targetSeconds || 0).toFixed(3)}s, not completed`;
+      }
+
+      const result = Number(attempt.resultSeconds || 0).toFixed(3);
+      const target = Number(attempt.targetSeconds || 0);
+      const difference = getFlashTimerDifference(attempt);
+      return `target ${target.toFixed(3)}s, result ${result}s, diff ${Number(difference || 0).toFixed(3)}s`;
     }
 
     function getMySportsmasterTieBreakAttempt() {
@@ -2008,23 +2030,7 @@
       return getSportsmasterTieBreakAttemptForPlayer(currentUser.uid);
     }
 
-    async function saveSportsmasterTieBreakAttempt(elapsedSeconds) {
-      if (!currentUser || !currentPlayer || !selectedWeekId) return;
-      if (!sportsmasterTieBreakTarget) throw new Error("Tie-break target is not ready yet.");
-
-      if (getMySportsmasterTieBreakAttempt()) {
-        throw new Error("You have already played this tie-break for the selected week.");
-      }
-
-      const roundedElapsed = Number(elapsedSeconds.toFixed(3));
-      const differenceSeconds = Number(Math.abs(roundedElapsed - Number(sportsmasterTieBreakTarget)).toFixed(3));
-      const attempt = {
-        targetSeconds: Number(sportsmasterTieBreakTarget),
-        resultSeconds: roundedElapsed,
-        differenceSeconds,
-        createdAtMs: Date.now()
-      };
-
+    async function writeSportsmasterTieBreakAttempt(attempt) {
       await setDoc(doc(db, "players", currentUser.uid), {
         sportsmasterTieBreakAttempts: {
           [selectedWeekId]: attempt
@@ -2042,35 +2048,67 @@
       });
     }
 
-    function startMiniGame() {
-      if (!currentUser || !currentPlayer) return;
+    async function startMiniGame() {
+      if (!currentUser || !currentPlayer || !selectedWeekId) return;
+
       if (getMySportsmasterTieBreakAttempt()) {
-        showMessage(els.miniGameMessage, "You have already played this tie-break for the selected week.", "error");
+        showMessage(els.miniGameMessage, "You have already played the Flash Timer for the selected week.", "error");
         return;
       }
 
-      miniGameRunning = true;
-      miniGameStartedAt = performance.now();
-      els.miniGameStartButton.disabled = true;
-      els.miniGameStopButton.disabled = false;
-      els.miniGameStatus.textContent = "Running";
-      els.miniGameStatus.className = "status locked";
-      showMessage(els.miniGameMessage, "Timer running. Press SPACE or click Stop.", "");
+      const targetSeconds = randomMillisecondTargetSeconds(4, 10);
+      const startedAtMs = Date.now();
+      const attempt = {
+        status: "started",
+        targetSeconds,
+        startedAtMs,
+        createdAtMs: startedAtMs
+      };
+
+      try {
+        await writeSportsmasterTieBreakAttempt(attempt);
+        miniGameRunning = true;
+        miniGameStartedAt = performance.now();
+        sportsmasterTieBreakTarget = targetSeconds;
+        els.miniGameTarget.textContent = `Target: ${Number(targetSeconds).toFixed(3)} seconds`;
+        els.miniGameStartButton.disabled = true;
+        els.miniGameStopButton.disabled = false;
+        els.miniGameStatus.textContent = "Running";
+        els.miniGameStatus.className = "status locked";
+        showMessage(els.miniGameMessage, "Timer running. Press SPACE or click Stop when you think the target time has passed.", "");
+      } catch (error) {
+        showMessage(els.miniGameMessage, error.message, "error");
+        renderSportsmasterTieBreak();
+      }
     }
 
     async function stopMiniGame() {
-      if (!miniGameRunning || !miniGameStartedAt) return;
+      if (!miniGameRunning || !miniGameStartedAt || !currentUser || !currentPlayer) return;
 
+      const existingAttempt = getMySportsmasterTieBreakAttempt();
+      const targetSeconds = Number(existingAttempt?.targetSeconds || sportsmasterTieBreakTarget || 0);
       const elapsedSeconds = (performance.now() - miniGameStartedAt) / 1000;
+      const roundedElapsed = Number(elapsedSeconds.toFixed(3));
+      const differenceSeconds = Number(Math.abs(roundedElapsed - targetSeconds).toFixed(3));
+
       miniGameRunning = false;
       miniGameStartedAt = null;
       els.miniGameStopButton.disabled = true;
 
+      const completedAttempt = {
+        ...(existingAttempt || {}),
+        status: "completed",
+        targetSeconds,
+        resultSeconds: roundedElapsed,
+        differenceSeconds,
+        completedAtMs: Date.now()
+      };
+
       try {
-        await saveSportsmasterTieBreakAttempt(elapsedSeconds);
+        await writeSportsmasterTieBreakAttempt(completedAttempt);
         showMessage(
           els.miniGameMessage,
-          `Saved: ${elapsedSeconds.toFixed(3)} seconds. Target was ${sportsmasterTieBreakTarget} seconds.`,
+          `Saved: target ${Number(targetSeconds).toFixed(3)} seconds, result ${roundedElapsed.toFixed(3)} seconds, difference ${differenceSeconds.toFixed(3)} seconds.`,
           "success"
         );
       } catch (error) {
@@ -2085,31 +2123,41 @@
 
       const myAttempt = getMySportsmasterTieBreakAttempt();
       const ordered = [...sportsmasterTieBreakAttempts].sort((a, b) =>
-        Number(a.differenceSeconds || 999) - Number(b.differenceSeconds || 999) ||
+        Number(getFlashTimerDifference(a) ?? 999) - Number(getFlashTimerDifference(b) ?? 999) ||
         String(a.playerNickname || "").localeCompare(String(b.playerNickname || ""))
       );
 
-      els.miniGameTarget.textContent = sportsmasterTieBreakTarget
-        ? `Target: ${sportsmasterTieBreakTarget} seconds`
-        : "Target: loading...";
-
       if (!miniGameRunning) {
-        els.miniGameStatus.textContent = myAttempt ? "Played" : "Ready";
-        els.miniGameStatus.className = myAttempt ? "status complete" : "status";
-        els.miniGameStartButton.disabled = Boolean(myAttempt) || !sportsmasterTieBreakTarget;
+        els.miniGameTarget.textContent = myAttempt
+          ? `Your target: ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds`
+          : "Target: press Start to reveal your target";
+
+        els.miniGameStatus.textContent = myAttempt
+          ? myAttempt.status === "completed" ? "Played" : "Started"
+          : "Ready";
+        els.miniGameStatus.className = myAttempt
+          ? myAttempt.status === "completed" ? "status complete" : "status locked"
+          : "status";
+        els.miniGameStartButton.disabled = Boolean(myAttempt);
         els.miniGameStopButton.disabled = true;
       }
 
       if (myAttempt && !miniGameRunning) {
-        showMessage(
-          els.miniGameMessage,
-          `Your result: ${Number(myAttempt.resultSeconds).toFixed(3)} seconds. Difference: ${Number(myAttempt.differenceSeconds).toFixed(3)} seconds.`,
-          "success"
-        );
+        if (myAttempt.status === "completed") {
+          showMessage(
+            els.miniGameMessage,
+            `Your result: target ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds, result ${Number(myAttempt.resultSeconds || 0).toFixed(3)} seconds, difference ${Number(getFlashTimerDifference(myAttempt) || 0).toFixed(3)} seconds.`,
+            "success"
+          );
+        } else {
+          showMessage(els.miniGameMessage, "You started this Flash Timer attempt but did not complete it. Ask Adam to reset the attempt if this was a mistake.", "error");
+        }
+      } else if (!myAttempt && !miniGameRunning) {
+        showMessage(els.miniGameMessage, "Press Start to reveal your personal random target between 4.000 and 10.000 seconds.", "");
       }
 
       if (ordered.length === 0) {
-        els.miniGameLeaderboard.innerHTML = `<p class="muted">No tie-break attempts have been recorded for this week yet.</p>`;
+        els.miniGameLeaderboard.innerHTML = `<p class="muted">No Flash Timer attempts have been recorded for this week yet.</p>`;
         return;
       }
 
@@ -2119,18 +2167,23 @@
             <thead>
               <tr>
                 <th>Player</th>
+                <th>Target</th>
                 <th>Result</th>
                 <th>Difference</th>
               </tr>
             </thead>
             <tbody>
-              ${ordered.map(attempt => `
-                <tr>
-                  <td>${escapeHtml(attempt.playerNickname || getPlayerName(attempt.playerId))}</td>
-                  <td>${Number(attempt.resultSeconds || 0).toFixed(3)}s</td>
-                  <td>${Number(attempt.differenceSeconds || 0).toFixed(3)}s</td>
-                </tr>
-              `).join("")}
+              ${ordered.map(attempt => {
+                const completed = attempt.status === "completed";
+                return `
+                  <tr>
+                    <td>${escapeHtml(attempt.playerNickname || getPlayerName(attempt.playerId))}</td>
+                    <td>${Number(attempt.targetSeconds || 0).toFixed(3)}s</td>
+                    <td>${completed ? `${Number(attempt.resultSeconds || 0).toFixed(3)}s` : "Started"}</td>
+                    <td>${completed ? `${Number(getFlashTimerDifference(attempt) || 0).toFixed(3)}s` : "Not completed"}</td>
+                  </tr>
+                `;
+              }).join("")}
             </tbody>
           </table>
         </div>
