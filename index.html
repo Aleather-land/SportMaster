@@ -656,7 +656,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.07.30.3</span>
+          <span class="version-badge">v2026.08.01.1</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -848,7 +848,7 @@
 
       <div class="mini-game-panel">
         <div id="miniGameTarget" class="mini-game-target">Target: press Start to reveal your target</div>
-        <div class="muted"> STOP THE TIMER... Each player gets one attempt for the selected week. Your target is randomly chosen to the nearest millisecond when you press Start, then the timer is hidden. Press SPACE or Stop when you think your target time has passed.</div>
+        <div class="muted">STOP THE TIMER... Each player gets one attempt for the selected week. Your target is randomly chosen to the nearest millisecond when you press Start, then the timer is hidden. Press SPACE or Stop when you think your target time has passed.</div>
         <input id="miniGamePickInput" type="hidden" />
         <div>
           <button id="miniGameStartButton" type="button">Start the timer</button>
@@ -881,7 +881,7 @@
         <li>The winner of each event category gets one point. Everyone else gets zero for that category.</li>
         <li>Players may withdraw from the weekly game if they choose.</li>
         <li>Previous weeks remain available in the week selector. Event entries and predictions are read-only. After the Friday deadline, event owners and admins can select missing winners and add actual results.</li>
-        <li>The Sports Master Flash Timer tie-break can be used if the overall weekly points table is tied.</li>
+        <li>The Sports Master Stop the Timer tie-break can be used if the overall weekly points table is tied.</li>
       </ol>
     </section>
   </main>
@@ -1146,6 +1146,65 @@
       return `${selectedWeekId}|${eventId}|actualResult`;
     }
 
+    function currentEventRevision(event) {
+      return Number(event && event.eventRevision ? event.eventRevision : 0);
+    }
+
+    function predictionMatchesCurrentEvent(event, prediction) {
+      if (!prediction) return false;
+      return Number(prediction.eventRevision || 0) === currentEventRevision(event);
+    }
+
+    function eventChangeFieldsFromForm() {
+      return {
+        sport: els.sport.value.trim(),
+        eventName: els.eventName.value.trim(),
+        eventLink: els.eventLink.value.trim(),
+        eventStartAt: els.eventStartAt.value,
+        challengeDescription: els.challengeDescription.value.trim(),
+        predictionFormat: els.predictionFormat.value.trim(),
+        tieBreakType: els.tieBreakType.value,
+        tieBreakQuestion: els.tieBreakType.value === "text" ? els.tieBreakQuestion.value.trim() : "",
+        tieBreakFormat: els.tieBreakType.value === "text" ? els.tieBreakFormat.value.trim() : ""
+      };
+    }
+
+    function eventCoreFieldsChanged(existingEvent, nextValues) {
+      if (!existingEvent) return false;
+
+      const keys = [
+        "sport",
+        "eventName",
+        "eventLink",
+        "eventStartAt",
+        "challengeDescription",
+        "predictionFormat",
+        "tieBreakType",
+        "tieBreakQuestion",
+        "tieBreakFormat"
+      ];
+
+      return keys.some(key => String(existingEvent[key] || "") !== String(nextValues[key] || ""));
+    }
+
+    function activePredictionsForEvent(event) {
+      return (predictionsByEvent[event.id] || []).filter(prediction => predictionMatchesCurrentEvent(event, prediction));
+    }
+
+    function formatFirestoreTimestamp(value) {
+      if (!value) return "";
+      const date = value.seconds ? new Date(value.seconds * 1000) : new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return new Intl.DateTimeFormat("en-NZ", {
+        timeZone: NZ_TIME_ZONE,
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(date);
+    }
+
     function captureTableDrafts() {
       if (!currentUser) return;
 
@@ -1387,7 +1446,7 @@
     }
 
     async function ensureSelectedWeekTieBreakTarget() {
-      // Flash Timer targets are generated per player when they press Start.
+      // Stop the Timer targets are generated per player when they press Start.
       // There is no shared weekly target to prepare or reveal.
       sportsmasterTieBreakTarget = null;
     }
@@ -1498,6 +1557,7 @@
         const duplicate = predictionSnaps.docs.some(predictionDoc => {
           if (predictionDoc.id === currentUser.uid) return false;
           const existing = predictionDoc.data();
+          if (Number(existing.eventRevision || 0) !== currentEventRevision(event)) return false;
           const samePrediction = normalisePrediction(existing.prediction) === normalisePrediction(clean);
 
           if (!hasTieBreak) {
@@ -1529,6 +1589,7 @@
           playerNickname: currentPlayer.nickname,
           prediction: clean,
           tieBreakAnswer: cleanTieBreak,
+          eventRevision: currentEventRevision(event),
           updatedAt: serverTimestamp()
         }, { merge: true });
       });
@@ -1542,8 +1603,8 @@
         throw new Error("Only the event owner or an admin can select the winner after Friday 1700 NZT.");
       }
 
-      const prediction = (predictionsByEvent[eventId] || []).find(item => item.playerId === winnerPlayerId);
-      if (!prediction) throw new Error("Winner prediction was not found.");
+      const prediction = activePredictionsForEvent(event).find(item => item.playerId === winnerPlayerId);
+      if (!prediction) throw new Error("Winner prediction was not found for the current event version.");
 
       const eventRef = doc(db, "weeks", selectedWeekId, "events", eventId);
       const winningTieBreakAnswer = eventUsesStopTimerTieBreak(event)
@@ -1752,6 +1813,15 @@
         </tr>
       `);
 
+      if (events.some(event => currentEventRevision(event) > 0 || event.eventChangeNotice)) {
+        rows.push(`
+          <tr>
+            <td>Event update</td>
+            ${events.map(event => renderEventUpdateCell(event)).join("")}
+          </tr>
+        `);
+      }
+
       rows.push(`
         <tr>
           <td>Actual result</td>
@@ -1813,9 +1883,27 @@
       `;
     }
 
+    function renderEventUpdateCell(event) {
+      if (!event.eventChangeNotice && currentEventRevision(event) === 0) {
+        return `<td><span class="muted">No reset</span></td>`;
+      }
+
+      const changedAt = formatFirestoreTimestamp(event.eventChangedAt);
+      const changedBy = event.eventChangedBy ? getPlayerName(event.eventChangedBy) : "event owner";
+      const notice = event.eventChangeNotice || "This event was changed. Earlier predictions were reset.";
+
+      return `
+        <td>
+          <strong>Predictions reset</strong><br />
+          ${escapeHtml(notice)}
+          <span class="format-hint">Revision ${currentEventRevision(event)}${changedAt ? `, ${escapeHtml(changedAt)}` : ""}${changedBy ? ` by ${escapeHtml(changedBy)}` : ""}. Please submit a fresh prediction.</span>
+        </td>
+      `;
+    }
+
     function getPredictionForPlayer(event, playerId) {
       const predictions = predictionsByEvent[event.id] || [];
-      return predictions.find(item => item.playerId === playerId) || null;
+      return predictions.find(item => item.playerId === playerId && predictionMatchesCurrentEvent(event, item)) || null;
     }
 
     function formatVisiblePrediction(event, prediction) {
@@ -1823,7 +1911,7 @@
       const tieBreakText = eventUsesTextTieBreak(event) && prediction.tieBreakAnswer
         ? `<span class="format-hint">Tie-break: ${escapeHtml(prediction.tieBreakAnswer)}</span>`
         : eventUsesStopTimerTieBreak(event)
-          ? `<span class="format-hint">Flash Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}</span>`
+          ? `<span class="format-hint">Stop the Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}</span>`
           : "";
       return `${escapeHtml(prediction.prediction || "")}${tieBreakText}`;
     }
@@ -1866,6 +1954,7 @@
               ${locked ? "disabled" : ""}
             />
             ${event.predictionFormat ? `<span class="format-hint">Format: ${escapeHtml(event.predictionFormat)}</span>` : ""}
+            ${currentEventRevision(event) > 0 && !existing ? `<span class="save-status unsaved">Event changed. Please save a new prediction.</span>` : ""}
             ${usesTextTieBreak ? `
               <input
                 data-event-id="${escapeAttr(event.id)}"
@@ -1987,8 +2076,8 @@
         return `<span class="muted">Winner selection opens after Friday 1700 NZT</span>`;
       }
 
-      const predictions = predictionsByEvent[event.id] || [];
-      if (predictions.length === 0) return `<span class="muted">No predictions yet</span>`;
+      const predictions = activePredictionsForEvent(event);
+      if (predictions.length === 0) return `<span class="muted">No current predictions yet</span>`;
 
       return `
         <select class="winner-select" data-event-id="${escapeAttr(event.id)}">
@@ -2052,7 +2141,7 @@
       if (!currentUser || !currentPlayer || !selectedWeekId) return;
 
       if (getMySportsmasterTieBreakAttempt()) {
-        showMessage(els.miniGameMessage, "You have already played the Flash Timer for the selected week.", "error");
+        showMessage(els.miniGameMessage, "You have already played Stop the Timer for the selected week.", "error");
         return;
       }
 
@@ -2150,14 +2239,14 @@
             "success"
           );
         } else {
-          showMessage(els.miniGameMessage, "You started this Flash Timer attempt but did not complete it. Ask Adam to reset the attempt if this was a mistake.", "error");
+          showMessage(els.miniGameMessage, "You started this Stop the Timer attempt but did not complete it. Ask Adam to reset the attempt if this was a mistake.", "error");
         }
       } else if (!myAttempt && !miniGameRunning) {
         showMessage(els.miniGameMessage, "Press Start to reveal your personal random target between 4.000 and 10.000 seconds.", "");
       }
 
       if (ordered.length === 0) {
-        els.miniGameLeaderboard.innerHTML = `<p class="muted">No Flash Timer attempts have been recorded for this week yet.</p>`;
+        els.miniGameLeaderboard.innerHTML = `<p class="muted">No Stop the Timer attempts have been recorded for this week yet.</p>`;
         return;
       }
 
@@ -2531,25 +2620,59 @@
 
       try {
         await ensureWeekDocument();
-        await setDoc(doc(db, "weeks", selectedWeekId, "events", currentUser.uid), {
+
+        const existingEvent = events.find(item => item.ownerPlayerId === currentUser.uid);
+        const nextEventValues = eventChangeFieldsFromForm();
+        const coreFieldsChanged = eventCoreFieldsChanged(existingEvent, nextEventValues);
+        const existingActivePredictions = existingEvent ? activePredictionsForEvent(existingEvent) : [];
+        let nextRevision = existingEvent ? currentEventRevision(existingEvent) : 0;
+        let resetPredictions = false;
+
+        if (coreFieldsChanged && existingActivePredictions.length > 0) {
+          const confirmed = window.confirm(
+            `Changing this event will reset ${existingActivePredictions.length} saved prediction${existingActivePredictions.length === 1 ? "" : "s"}. ` +
+            "Players will need to submit fresh predictions for the updated event. Continue?"
+          );
+
+          if (!confirmed) {
+            showMessage(els.eventMessage, "Event update cancelled. Existing predictions have been kept.", "");
+            return;
+          }
+
+          nextRevision += 1;
+          resetPredictions = true;
+        }
+
+        const eventUpdate = {
           ownerPlayerId: currentUser.uid,
           ownerNickname: currentPlayer.nickname || currentPlayer.fullName,
-          sport: els.sport.value.trim(),
-          eventName: els.eventName.value.trim(),
-          eventLink: els.eventLink.value.trim(),
-          eventStartAt: els.eventStartAt.value,
-          challengeDescription: els.challengeDescription.value.trim(),
-          predictionFormat: els.predictionFormat.value.trim(),
-          tieBreakType: els.tieBreakType.value,
-          tieBreakQuestion: els.tieBreakType.value === "text" ? els.tieBreakQuestion.value.trim() : "",
-          tieBreakFormat: els.tieBreakType.value === "text" ? els.tieBreakFormat.value.trim() : "",
+          ...nextEventValues,
+          eventRevision: nextRevision,
           updatedAt: serverTimestamp()
-        }, { merge: true });
+        };
+
+        if (resetPredictions) {
+          eventUpdate.eventChangedAt = serverTimestamp();
+          eventUpdate.eventChangedBy = currentUser.uid;
+          eventUpdate.eventChangeNotice = "Event details changed. Saved predictions were reset and players must submit fresh predictions.";
+          eventUpdate.winnerPlayerId = "";
+          eventUpdate.winningPrediction = "";
+          eventUpdate.winningTieBreakAnswer = "";
+          eventUpdate.completedAt = null;
+        }
+
+        await setDoc(doc(db, "weeks", selectedWeekId, "events", currentUser.uid), eventUpdate, { merge: true });
 
         eventFormDirty = false;
         eventFormLoadedKey = null;
         els.saveEventButton.textContent = "Update saved event";
-        showMessage(els.eventMessage, "Event saved. Any further changes will update this event.", "success");
+        showMessage(
+          els.eventMessage,
+          resetPredictions
+            ? "Event updated. Previous predictions were reset and players need to predict again."
+            : "Event saved. Any further changes will update this event.",
+          "success"
+        );
       } catch (error) {
         showMessage(els.eventMessage, error.message, "error");
       }
