@@ -656,7 +656,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.08.01.1</span>
+          <span class="version-badge">v2026.08.07.2</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -1285,19 +1285,8 @@
     }
 
     function collectSportsmasterTieBreakAttempts() {
-      sportsmasterTieBreakAttempts = players
-        .map(player => {
-          const attempts = player.sportsmasterTieBreakAttempts || {};
-          const attempt = attempts[selectedWeekId];
-          if (!attempt) return null;
-          return {
-            id: player.id,
-            playerId: player.id,
-            playerNickname: player.nickname || player.fullName || "Player",
-            ...attempt
-          };
-        })
-        .filter(Boolean);
+      // Stop the Timer attempts are now loaded from weeks/{weekId}/timerAttempts.
+      // The old players/{uid}.sportsmasterTieBreakAttempts field is intentionally ignored.
     }
 
     function toggleTieBreakDetails() {
@@ -1457,8 +1446,18 @@
       unsubscribeSportsmasterTieBreak = null;
 
       await ensureSelectedWeekTieBreakTarget();
-      collectSportsmasterTieBreakAttempts();
-      renderSportsmasterTieBreak();
+
+      unsubscribeSportsmasterTieBreak = onSnapshot(
+        collection(db, "weeks", selectedWeekId, "timerAttempts"),
+        snapshot => {
+          sportsmasterTieBreakAttempts = snapshot.docs.map(d => ({
+            id: d.id,
+            playerId: d.id,
+            ...d.data()
+          }));
+          renderSportsmasterTieBreak();
+        }
+      );
     }
 
     function listenToPredictions() {
@@ -2095,9 +2094,44 @@
       return sportsmasterTieBreakAttempts.find(attempt => attempt.playerId === playerId || attempt.id === playerId) || null;
     }
 
+    function timestampMillis(value) {
+      if (!value) return null;
+      if (typeof value.toMillis === "function") return value.toMillis();
+      if (typeof value.seconds === "number") return (value.seconds * 1000) + Math.floor((value.nanoseconds || 0) / 1000000);
+      if (typeof value === "number") return value;
+      return null;
+    }
+
     function getFlashTimerDifference(attempt) {
       if (!attempt || attempt.status !== "completed") return null;
       return Number(attempt.differenceSeconds ?? Math.abs(Number(attempt.resultSeconds || 0) - Number(attempt.targetSeconds || 0)).toFixed(3));
+    }
+
+    function getServerElapsedSeconds(attempt) {
+      const startMs = timestampMillis(attempt?.startedAt);
+      const stopMs = timestampMillis(attempt?.stoppedAt);
+      if (!startMs || !stopMs || stopMs < startMs) return null;
+      return Number(((stopMs - startMs) / 1000).toFixed(3));
+    }
+
+    function getStopTimerAuditFlags(attempt) {
+      if (!attempt || attempt.status !== "completed") return [];
+      const flags = new Set(Array.isArray(attempt.suspicionFlags) ? attempt.suspicionFlags : []);
+      const difference = getFlashTimerDifference(attempt);
+      const resultSeconds = Number(attempt.resultSeconds || 0);
+      const serverElapsed = getServerElapsedSeconds(attempt);
+      const telemetry = attempt.telemetry || {};
+
+      if (difference === 0) flags.add("perfect result, review if contested");
+      if (resultSeconds < 3.5 || resultSeconds > 11.5) flags.add("result outside expected range");
+      if (serverElapsed != null && Math.abs(serverElapsed - resultSeconds) > 2) flags.add("server/client timing mismatch");
+      if (Number(telemetry.stopButtonMovesSeen || 0) < 2) flags.add("low moving-button activity");
+      if (Number(telemetry.pointerMoveCount || 0) < 1) flags.add("no pointer movement recorded");
+      if (telemetry.visibilityLost === true) flags.add("page visibility changed during attempt");
+      if (telemetry.focusLost === true) flags.add("page lost focus during attempt");
+      if (telemetry.stopEventTrusted === false) flags.add("stop click was not a trusted browser event");
+
+      return [...flags];
     }
 
     function formatStopTimerAttemptForPlayer(playerId) {
@@ -2111,7 +2145,8 @@
       const result = Number(attempt.resultSeconds || 0).toFixed(3);
       const target = Number(attempt.targetSeconds || 0);
       const difference = getFlashTimerDifference(attempt);
-      return `target ${target.toFixed(3)}s, result ${result}s, diff ${Number(difference || 0).toFixed(3)}s`;
+      const flags = getStopTimerAuditFlags(attempt);
+      return `target ${target.toFixed(3)}s, result ${result}s, diff ${Number(difference || 0).toFixed(3)}s${flags.length ? " [review]" : ""}`;
     }
 
     function getMySportsmasterTieBreakAttempt() {
@@ -2119,92 +2154,26 @@
       return getSportsmasterTieBreakAttemptForPlayer(currentUser.uid);
     }
 
-    async function writeSportsmasterTieBreakAttempt(attempt) {
-      await setDoc(doc(db, "players", currentUser.uid), {
-        sportsmasterTieBreakAttempts: {
-          [selectedWeekId]: attempt
-        },
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-
-      sportsmasterTieBreakAttempts = sportsmasterTieBreakAttempts
-        .filter(existingAttempt => existingAttempt.playerId !== currentUser.uid && existingAttempt.id !== currentUser.uid);
-      sportsmasterTieBreakAttempts.push({
-        id: currentUser.uid,
-        playerId: currentUser.uid,
-        playerNickname: currentPlayer.nickname || currentPlayer.fullName,
-        ...attempt
-      });
-    }
-
-    async function startMiniGame() {
+    function startMiniGame() {
       if (!currentUser || !currentPlayer || !selectedWeekId) return;
 
       if (getMySportsmasterTieBreakAttempt()) {
-        showMessage(els.miniGameMessage, "You have already played Stop the Timer for the selected week.", "error");
+        showMessage(els.miniGameMessage, "You have already opened Stop the Timer for the selected week.", "error");
         return;
       }
 
-      const targetSeconds = randomMillisecondTargetSeconds(4, 10);
-      const startedAtMs = Date.now();
-      const attempt = {
-        status: "started",
-        targetSeconds,
-        startedAtMs,
-        createdAtMs: startedAtMs
-      };
-
-      try {
-        await writeSportsmasterTieBreakAttempt(attempt);
-        miniGameRunning = true;
-        miniGameStartedAt = performance.now();
-        sportsmasterTieBreakTarget = targetSeconds;
-        els.miniGameTarget.textContent = `Target: ${Number(targetSeconds).toFixed(3)} seconds`;
-        els.miniGameStartButton.disabled = true;
-        els.miniGameStopButton.disabled = false;
-        els.miniGameStatus.textContent = "Running";
-        els.miniGameStatus.className = "status locked";
-        showMessage(els.miniGameMessage, "Timer running. Press SPACE or click Stop when you think the target time has passed.", "");
-      } catch (error) {
-        showMessage(els.miniGameMessage, error.message, "error");
-        renderSportsmasterTieBreak();
+      const url = `stop-the-timer.html?weekId=${encodeURIComponent(selectedWeekId)}`;
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        showMessage(els.miniGameMessage, `Pop-up blocked. Open ${url} manually from the same folder as index.html.`, "error");
+        return;
       }
+
+      showMessage(els.miniGameMessage, "Stop the Timer opened in a new tab. Return here after playing and the leaderboard will update automatically.", "success");
     }
 
     async function stopMiniGame() {
-      if (!miniGameRunning || !miniGameStartedAt || !currentUser || !currentPlayer) return;
-
-      const existingAttempt = getMySportsmasterTieBreakAttempt();
-      const targetSeconds = Number(existingAttempt?.targetSeconds || sportsmasterTieBreakTarget || 0);
-      const elapsedSeconds = (performance.now() - miniGameStartedAt) / 1000;
-      const roundedElapsed = Number(elapsedSeconds.toFixed(3));
-      const differenceSeconds = Number(Math.abs(roundedElapsed - targetSeconds).toFixed(3));
-
-      miniGameRunning = false;
-      miniGameStartedAt = null;
-      els.miniGameStopButton.disabled = true;
-
-      const completedAttempt = {
-        ...(existingAttempt || {}),
-        status: "completed",
-        targetSeconds,
-        resultSeconds: roundedElapsed,
-        differenceSeconds,
-        completedAtMs: Date.now()
-      };
-
-      try {
-        await writeSportsmasterTieBreakAttempt(completedAttempt);
-        showMessage(
-          els.miniGameMessage,
-          `Saved: target ${Number(targetSeconds).toFixed(3)} seconds, result ${roundedElapsed.toFixed(3)} seconds, difference ${differenceSeconds.toFixed(3)} seconds.`,
-          "success"
-        );
-      } catch (error) {
-        showMessage(els.miniGameMessage, error.message, "error");
-      } finally {
-        renderSportsmasterTieBreak();
-      }
+      // Stop the Timer now runs in stop-the-timer.html.
     }
 
     function renderSportsmasterTieBreak() {
@@ -2216,33 +2185,32 @@
         String(a.playerNickname || "").localeCompare(String(b.playerNickname || ""))
       );
 
-      if (!miniGameRunning) {
-        els.miniGameTarget.textContent = myAttempt
-          ? `Your target: ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds`
-          : "Target: press Start to reveal your target";
+      els.miniGameTarget.textContent = myAttempt
+        ? `Your target: ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds`
+        : "Open Stop the Timer to reveal your personal target";
 
-        els.miniGameStatus.textContent = myAttempt
-          ? myAttempt.status === "completed" ? "Played" : "Started"
-          : "Ready";
-        els.miniGameStatus.className = myAttempt
-          ? myAttempt.status === "completed" ? "status complete" : "status locked"
-          : "status";
-        els.miniGameStartButton.disabled = Boolean(myAttempt);
-        els.miniGameStopButton.disabled = true;
-      }
+      els.miniGameStatus.textContent = myAttempt
+        ? myAttempt.status === "completed" ? "Played" : "Started"
+        : "Ready";
+      els.miniGameStatus.className = myAttempt
+        ? myAttempt.status === "completed" ? "status complete" : "status locked"
+        : "status";
+      els.miniGameStartButton.disabled = Boolean(myAttempt);
+      els.miniGameStopButton.disabled = true;
 
-      if (myAttempt && !miniGameRunning) {
+      if (myAttempt) {
         if (myAttempt.status === "completed") {
+          const flags = getStopTimerAuditFlags(myAttempt);
           showMessage(
             els.miniGameMessage,
-            `Your result: target ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds, result ${Number(myAttempt.resultSeconds || 0).toFixed(3)} seconds, difference ${Number(getFlashTimerDifference(myAttempt) || 0).toFixed(3)} seconds.`,
-            "success"
+            `Your result: target ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds, result ${Number(myAttempt.resultSeconds || 0).toFixed(3)} seconds, difference ${Number(getFlashTimerDifference(myAttempt) || 0).toFixed(3)} seconds.${flags.length ? " Review flag: " + flags.join("; ") : ""}`,
+            flags.length ? "error" : "success"
           );
         } else {
           showMessage(els.miniGameMessage, "You started this Stop the Timer attempt but did not complete it. Ask Adam to reset the attempt if this was a mistake.", "error");
         }
-      } else if (!myAttempt && !miniGameRunning) {
-        showMessage(els.miniGameMessage, "Press Start to reveal your personal random target between 4.000 and 10.000 seconds.", "");
+      } else {
+        showMessage(els.miniGameMessage, "Press Open Stop the Timer to play your personal random target between 4.000 and 10.000 seconds.", "");
       }
 
       if (ordered.length === 0) {
@@ -2259,17 +2227,24 @@
                 <th>Target</th>
                 <th>Result</th>
                 <th>Difference</th>
+                <th>Audit</th>
               </tr>
             </thead>
             <tbody>
               ${ordered.map(attempt => {
                 const completed = attempt.status === "completed";
+                const flags = completed ? getStopTimerAuditFlags(attempt) : [];
+                const serverElapsed = getServerElapsedSeconds(attempt);
                 return `
                   <tr>
                     <td>${escapeHtml(attempt.playerNickname || getPlayerName(attempt.playerId))}</td>
                     <td>${Number(attempt.targetSeconds || 0).toFixed(3)}s</td>
                     <td>${completed ? `${Number(attempt.resultSeconds || 0).toFixed(3)}s` : "Started"}</td>
                     <td>${completed ? `${Number(getFlashTimerDifference(attempt) || 0).toFixed(3)}s` : "Not completed"}</td>
+                    <td>
+                      ${completed && serverElapsed != null ? `<span class="format-hint">Server elapsed: ${serverElapsed.toFixed(3)}s</span>` : ""}
+                      ${flags.length ? `<span class="error">Review: ${escapeHtml(flags.join("; "))}</span>` : completed ? `<span class="success">No obvious flags</span>` : `<span class="muted">Pending</span>`}
+                    </td>
                   </tr>
                 `;
               }).join("")}
