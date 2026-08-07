@@ -244,7 +244,7 @@
 
     const params = new URLSearchParams(window.location.search);
     const weekId = params.get("weekId") || "";
-    const CHALLENGE_VERSION = "free-static-v2026.08.07.3";
+    const CHALLENGE_VERSION = "free-static-v2026.08.07.4";
 
     let currentUser = null;
     let currentPlayer = null;
@@ -280,6 +280,11 @@
     function setStatus(text, className = "status") {
       els.statusBadge.textContent = text;
       els.statusBadge.className = className;
+    }
+
+    function playerIsApproved(player) {
+      if (!player) return false;
+      return player.approved === true || (player.approved !== false && !player.approvalStatus);
     }
 
     function randomMillisecondTargetSeconds(minSeconds, maxSeconds) {
@@ -479,6 +484,16 @@
       }
 
       currentPlayer = playerSnap.data();
+
+      if (!playerIsApproved(currentPlayer)) {
+        setStatus("Approval required", "status");
+        els.startButton.disabled = true;
+        els.stopButton.disabled = true;
+        els.headerSummary.textContent = `Week ${weekId}. Player: ${currentPlayer.nickname || currentPlayer.fullName || "Player"}.`;
+        showMessage("Your registration request is waiting for admin approval. You cannot play Stop the Timer yet.", "error");
+        return;
+      }
+
       attemptRef = doc(db, "weeks", weekId, "timerAttempts", user.uid);
       els.headerSummary.textContent = `Week ${weekId}. Player: ${currentPlayer.nickname || currentPlayer.fullName || "Player"}.`;
 
