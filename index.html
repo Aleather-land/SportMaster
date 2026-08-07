@@ -39,7 +39,8 @@
     }
 
     .header-inner {
-      max-width: 1280px;
+      max-width: none;
+      width: 100%;
       margin: 0 auto;
       display: flex;
       justify-content: space-between;
@@ -57,9 +58,10 @@
     }
 
     main {
-      max-width: 1280px;
+      max-width: none;
+      width: 100%;
       margin: 0 auto;
-      padding: 1.5rem;
+      padding: 1.25rem;
     }
 
     .card {
@@ -236,7 +238,8 @@
 
     table {
       width: 100%;
-      min-width: 980px;
+      min-width: 100%;
+      table-layout: fixed;
       border-collapse: collapse;
       background: white;
     }
@@ -247,6 +250,8 @@
       border-right: 1px solid var(--line);
       padding: 0.75rem;
       vertical-align: top;
+      overflow-wrap: anywhere;
+      word-break: normal;
     }
 
     th:last-child,
@@ -273,7 +278,8 @@
       background: #f8fafc;
       font-weight: 800;
       z-index: 2;
-      min-width: 170px;
+      width: 155px;
+      min-width: 135px;
     }
 
     th:first-child {
@@ -284,7 +290,7 @@
     .prediction-cell {
       display: grid;
       gap: 0.5rem;
-      min-width: 180px;
+      min-width: 0;
     }
 
     .format-hint {
@@ -355,7 +361,7 @@
     .result-cell {
       display: grid;
       gap: 0.5rem;
-      min-width: 190px;
+      min-width: 0;
     }
 
     .score-pill {
@@ -681,7 +687,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.08.07.6</span>
+          <span class="version-badge">v2026.08.07.7</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
