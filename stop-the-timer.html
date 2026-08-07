@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Stop the Timer - Sports Master</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(12, 27, 48, 0.94);
+      --ink: #eaf2ff;
+      --muted: #9fb4cf;
+      --line: rgba(148, 163, 184, 0.28);
+      --brand: #facc15;
+      --danger: #ef4444;
+      --good: #22c55e;
+      --warn: #fb923c;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(250, 204, 21, 0.18), transparent 30rem),
+        radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.12), transparent 26rem),
+        linear-gradient(135deg, #06111f 0%, #091827 44%, #07111f 100%);
+      color: var(--ink);
+    }
+
+    header {
+      padding: 1.4rem 1.5rem;
+      background: linear-gradient(135deg, rgba(5, 12, 24, 0.98), rgba(11, 34, 57, 0.98));
+      border-bottom: 3px solid rgba(250, 204, 21, 0.8);
+    }
+
+    main {
+      width: min(920px, calc(100% - 2rem));
+      margin: 1.5rem auto;
+    }
+
+    h1 { margin: 0 0 0.3rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    h2 { margin-top: 0; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.34);
+      margin-bottom: 1rem;
+    }
+
+    .muted { color: var(--muted); }
+    .success { color: var(--good); font-weight: 800; }
+    .error { color: var(--danger); font-weight: 800; }
+    .warn { color: var(--warn); font-weight: 800; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      font-weight: 900;
+      background: rgba(250, 204, 21, 0.14);
+      border: 1px solid rgba(250, 204, 21, 0.45);
+      color: #fde68a;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    button {
+      border: 1px solid rgba(254, 240, 138, 0.5);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1.15rem;
+      background: linear-gradient(135deg, #facc15, #f97316);
+      color: #111827;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.22);
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .target {
+      font-size: clamp(2.2rem, 8vw, 5rem);
+      font-weight: 1000;
+      color: #fef08a;
+      text-shadow: 0 0 24px rgba(250, 204, 21, 0.32);
+      margin: 1rem 0;
+    }
+
+    .arena {
+      position: relative;
+      min-height: 320px;
+      border: 1px solid rgba(34, 197, 94, 0.32);
+      border-radius: 1rem;
+      margin-top: 1rem;
+      background:
+        radial-gradient(circle at center, rgba(34, 197, 94, 0.12), transparent 20rem),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: auto, 48px 48px, 48px 48px;
+      overflow: hidden;
+    }
+
+    #stopButton {
+      position: absolute;
+      min-width: 150px;
+      min-height: 70px;
+      border-radius: 999px;
+      font-size: 1.1rem;
+      touch-action: manipulation;
+    }
+
+    .hidden { display: none !important; }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .result-box {
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      padding: 0.85rem;
+      background: rgba(2, 6, 23, 0.45);
+    }
+
+    .result-box strong { display: block; font-size: 1.4rem; margin-top: 0.25rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Stop the Timer</h1>
+    <div id="headerSummary" class="muted">Loading Sports Master challenge...</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Your one attempt</h2>
+      <p class="muted">
+        Press Start to reveal your personal target. Your browser records the attempt, Firestore records server timestamps, and the stop button moves around the arena as a simple anti-bot check.
+      </p>
+      <span id="statusBadge" class="status">Loading</span>
+      <div id="target" class="target">-.---s</div>
+      <button id="startButton" type="button" disabled>Start the timer</button>
+      <p id="message" class="muted"></p>
+    </section>
+
+    <section id="arenaCard" class="card hidden">
+      <h2>Click the moving stop button</h2>
+      <p class="muted">The timer display is hidden. Click the moving button when you think your target time has passed.</p>
+      <div id="arena" class="arena">
+        <button id="stopButton" type="button">Stop the Timer</button>
+      </div>
+    </section>
+
+    <section id="resultCard" class="card hidden">
+      <h2>Result</h2>
+      <div id="resultSummary"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAawyNX4CCAe_IsU4ZJTar2npxFyqwHFrE",
+      authDomain: "sportmaster-d86e0.firebaseapp.com",
+      projectId: "sportmaster-d86e0",
+      storageBucket: "sportmaster-d86e0.firebasestorage.app",
+      messagingSenderId: "178820430750",
+      appId: "1:178820430750:web:93e8db4fc4623cc712b48f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const weekId = params.get("weekId") || "";
+    const CHALLENGE_VERSION = "free-static-v2026.08.07.2";
+
+    let currentUser = null;
+    let currentPlayer = null;
+    let attemptRef = null;
+    let localStartPerformance = null;
+    let localTargetSeconds = null;
+    let moveTimer = null;
+    let running = false;
+    let pointerMoveCount = 0;
+    let pointerPathPx = 0;
+    let lastPointerX = null;
+    let lastPointerY = null;
+    let stopButtonMovesSeen = 0;
+    let visibilityLost = false;
+    let focusLost = false;
+
+    const els = {
+      headerSummary: document.querySelector("#headerSummary"),
+      statusBadge: document.querySelector("#statusBadge"),
+      target: document.querySelector("#target"),
+      startButton: document.querySelector("#startButton"),
+      message: document.querySelector("#message"),
+      arenaCard: document.querySelector("#arenaCard"),
+      arena: document.querySelector("#arena"),
+      stopButton: document.querySelector("#stopButton"),
+      resultCard: document.querySelector("#resultCard"),
+      resultSummary: document.querySelector("#resultSummary")
+    };
+
+    function showMessage(message, type = "muted") {
+      els.message.textContent = message;
+      els.message.className = type;
+    }
+
+    function setStatus(text, className = "status") {
+      els.statusBadge.textContent = text;
+      els.statusBadge.className = className;
+    }
+
+    function randomMillisecondTargetSeconds(minSeconds, maxSeconds) {
+      const minMs = Math.round(minSeconds * 1000);
+      const maxMs = Math.round(maxSeconds * 1000);
+      const range = maxMs - minMs + 1;
+
+      if (window.crypto && crypto.getRandomValues) {
+        const values = new Uint32Array(1);
+        crypto.getRandomValues(values);
+        return Number(((minMs + (values[0] % range)) / 1000).toFixed(3));
+      }
+
+      return Number(((minMs + Math.floor(Math.random() * range)) / 1000).toFixed(3));
+    }
+
+    function timestampMillis(value) {
+      if (!value) return null;
+      if (typeof value.toMillis === "function") return value.toMillis();
+      if (typeof value.seconds === "number") return (value.seconds * 1000) + Math.floor((value.nanoseconds || 0) / 1000000);
+      return null;
+    }
+
+    function moveStopButton() {
+      const arenaRect = els.arena.getBoundingClientRect();
+      const buttonRect = els.stopButton.getBoundingClientRect();
+      const maxLeft = Math.max(8, arenaRect.width - buttonRect.width - 12);
+      const maxTop = Math.max(8, arenaRect.height - buttonRect.height - 12);
+      const left = 8 + Math.floor(Math.random() * maxLeft);
+      const top = 8 + Math.floor(Math.random() * maxTop);
+      els.stopButton.style.left = `${left}px`;
+      els.stopButton.style.top = `${top}px`;
+      stopButtonMovesSeen += 1;
+    }
+
+    function startMovingButton() {
+      stopButtonMovesSeen = 0;
+      moveStopButton();
+      moveTimer = window.setInterval(moveStopButton, 520 + Math.floor(Math.random() * 180));
+    }
+
+    function stopMovingButton() {
+      if (moveTimer) window.clearInterval(moveTimer);
+      moveTimer = null;
+    }
+
+    function collectSuspicionFlags(resultSeconds, differenceSeconds, event) {
+      const flags = [];
+      if (differenceSeconds === 0) flags.push("perfect result, review if contested");
+      if (resultSeconds < 3.5 || resultSeconds > 11.5) flags.push("result outside expected range");
+      if (pointerMoveCount < 1) flags.push("no pointer movement recorded");
+      if (stopButtonMovesSeen < 2) flags.push("low moving-button activity");
+      if (visibilityLost) flags.push("page visibility changed during attempt");
+      if (focusLost) flags.push("page lost focus during attempt");
+      if (event && event.isTrusted === false) flags.push("stop click was not a trusted browser event");
+      return flags;
+    }
+
+    function renderCompletedAttempt(attempt) {
+      const target = Number(attempt.targetSeconds || 0);
+      const result = Number(attempt.resultSeconds || 0);
+      const difference = Number(attempt.differenceSeconds || 0);
+      const startedMs = timestampMillis(attempt.startedAt);
+      const stoppedMs = timestampMillis(attempt.stoppedAt);
+      const serverElapsed = startedMs && stoppedMs ? Number(((stoppedMs - startedMs) / 1000).toFixed(3)) : null;
+      const flags = Array.isArray(attempt.suspicionFlags) ? attempt.suspicionFlags : [];
+
+      setStatus(flags.length ? "Review" : "Completed", flags.length ? "status" : "status");
+      els.target.textContent = `${target.toFixed(3)}s`;
+      els.startButton.disabled = true;
+      els.arenaCard.classList.add("hidden");
+      els.resultCard.classList.remove("hidden");
+      els.resultSummary.innerHTML = `
+        <div class="result-grid">
+          <div class="result-box">Target<strong>${target.toFixed(3)}s</strong></div>
+          <div class="result-box">Result<strong>${result.toFixed(3)}s</strong></div>
+          <div class="result-box">Difference<strong>${difference.toFixed(3)}s</strong></div>
+          <div class="result-box">Server elapsed<strong>${serverElapsed == null ? "Pending" : `${serverElapsed.toFixed(3)}s`}</strong></div>
+        </div>
+        ${flags.length ? `<p class="warn">Review flags: ${flags.map(escapeHtml).join("; ")}</p>` : `<p class="success">No obvious review flags from this page.</p>`}
+      `;
+      showMessage("This attempt has been saved. You can close this tab and return to Sports Master.", flags.length ? "warn" : "success");
+    }
+
+    function renderStartedAttempt(attempt) {
+      setStatus("Started", "status");
+      els.target.textContent = `${Number(attempt.targetSeconds || 0).toFixed(3)}s`;
+      els.startButton.disabled = true;
+      showMessage("This attempt has already been started. If the page was refreshed or closed before stopping, ask Adam to reset the attempt.", "error");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function startAttempt() {
+      if (!currentUser || !currentPlayer || !attemptRef) return;
+
+      localTargetSeconds = randomMillisecondTargetSeconds(4, 10);
+      const nowMs = Date.now();
+      const attempt = {
+        playerId: currentUser.uid,
+        playerNickname: currentPlayer.nickname || currentPlayer.fullName || "Player",
+        status: "started",
+        targetSeconds: localTargetSeconds,
+        startedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        clientStartEpochMs: nowMs,
+        challengeVersion: CHALLENGE_VERSION,
+        userAgent: navigator.userAgent.slice(0, 180),
+        screenWidth: window.screen ? Number(window.screen.width || 0) : 0,
+        screenHeight: window.screen ? Number(window.screen.height || 0) : 0
+      };
+
+      try {
+        els.startButton.disabled = true;
+        await setDoc(attemptRef, attempt);
+        localStartPerformance = performance.now();
+        running = true;
+        pointerMoveCount = 0;
+        pointerPathPx = 0;
+        lastPointerX = null;
+        lastPointerY = null;
+        visibilityLost = false;
+        focusLost = false;
+        setStatus("Running", "status");
+        els.target.textContent = `${localTargetSeconds.toFixed(3)}s`;
+        els.arenaCard.classList.remove("hidden");
+        showMessage("Timer running. The display is hidden. Click the moving Stop button when you think the target time has passed.", "muted");
+        startMovingButton();
+      } catch (error) {
+        showMessage(error.message, "error");
+        els.startButton.disabled = false;
+      }
+    }
+
+    async function finishAttempt(event) {
+      if (!running || !localStartPerformance || !attemptRef) return;
+
+      running = false;
+      stopMovingButton();
+      els.stopButton.disabled = true;
+
+      const elapsedSeconds = Number(((performance.now() - localStartPerformance) / 1000).toFixed(3));
+      const targetSeconds = Number(localTargetSeconds || 0);
+      const differenceSeconds = Number(Math.abs(elapsedSeconds - targetSeconds).toFixed(3));
+      const suspicionFlags = collectSuspicionFlags(elapsedSeconds, differenceSeconds, event);
+
+      try {
+        await updateDoc(attemptRef, {
+          status: "completed",
+          resultSeconds: elapsedSeconds,
+          differenceSeconds,
+          stoppedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          clientStopEpochMs: Date.now(),
+          telemetry: {
+            pointerMoveCount,
+            pointerPathPx: Number(pointerPathPx.toFixed(1)),
+            stopButtonMovesSeen,
+            visibilityLost,
+            focusLost,
+            stopEventTrusted: event ? event.isTrusted === true : false,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight
+          },
+          suspicionFlags
+        });
+        showMessage("Result saved. Waiting for Firestore to confirm server timestamps...", "success");
+      } catch (error) {
+        running = true;
+        els.stopButton.disabled = false;
+        startMovingButton();
+        showMessage(error.message, "error");
+      }
+    }
+
+    document.addEventListener("pointermove", event => {
+      if (!running) return;
+      pointerMoveCount += 1;
+      if (lastPointerX != null && lastPointerY != null) {
+        pointerPathPx += Math.hypot(event.clientX - lastPointerX, event.clientY - lastPointerY);
+      }
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (running && document.hidden) visibilityLost = true;
+    });
+
+    window.addEventListener("blur", () => {
+      if (running) focusLost = true;
+    });
+
+    els.startButton.addEventListener("click", startAttempt);
+    els.stopButton.addEventListener("click", finishAttempt);
+
+    onAuthStateChanged(auth, async user => {
+      currentUser = user;
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(weekId)) {
+        setStatus("Error", "status");
+        showMessage("Missing or invalid weekId in the page URL.", "error");
+        return;
+      }
+
+      if (!user) {
+        setStatus("Sign in required", "status");
+        showMessage("Please sign in through Sports Master first, then open Stop the Timer again.", "error");
+        return;
+      }
+
+      const playerSnap = await getDoc(doc(db, "players", user.uid));
+      if (!playerSnap.exists()) {
+        setStatus("No player", "status");
+        showMessage("Signed in, but no Sports Master player profile was found.", "error");
+        return;
+      }
+
+      currentPlayer = playerSnap.data();
+      attemptRef = doc(db, "weeks", weekId, "timerAttempts", user.uid);
+      els.headerSummary.textContent = `Week ${weekId}. Player: ${currentPlayer.nickname || currentPlayer.fullName || "Player"}.`;
+
+      onSnapshot(attemptRef, snap => {
+        if (!snap.exists()) {
+          setStatus("Ready", "status");
+          els.startButton.disabled = false;
+          showMessage("Ready. Press Start once you are prepared. You only get one attempt.", "muted");
+          return;
+        }
+
+        const attempt = snap.data();
+        if (attempt.status === "completed") {
+          running = false;
+          stopMovingButton();
+          renderCompletedAttempt(attempt);
+          return;
+        }
+
+        if (!running) renderStartedAttempt(attempt);
+      });
+    });
+  </script>
+</body>
+</html>
