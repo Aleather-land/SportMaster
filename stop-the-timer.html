@@ -3,6 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#07111f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Sports Master">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Stop the Timer - Sports Master</title>
   <style>
     :root {
@@ -162,6 +171,32 @@
       text-align: center;
     }
 
+
+
+    .top-links {
+      display: flex;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+      margin-top: 0.85rem;
+    }
+
+    .top-links a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 0.5rem 0.8rem;
+      background: rgba(250, 204, 21, 0.14);
+      border: 1px solid rgba(250, 204, 21, 0.38);
+      color: #fef3c7;
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    .top-links a:hover {
+      background: rgba(250, 204, 21, 0.24);
+    }
+
     .hidden { display: none !important; }
 
     .result-grid {
@@ -185,6 +220,10 @@
   <header>
     <h1>Stop the Timer</h1>
     <div id="headerSummary" class="muted">Loading Sports Master challenge...</div>
+    <div class="top-links">
+      <a href="index.html">Back to Sports Master</a>
+      <a href="help.html" target="_blank" rel="noopener">Help & rules</a>
+    </div>
   </header>
 
   <main>

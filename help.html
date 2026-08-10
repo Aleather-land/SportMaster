@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#07111f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Sports Master">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Sports Master Help</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(12, 27, 48, 0.94);
+      --panel-2: rgba(15, 38, 68, 0.96);
+      --ink: #eaf2ff;
+      --muted: #9fb4cf;
+      --line: rgba(148, 163, 184, 0.26);
+      --gold: #facc15;
+      --orange: #f97316;
+      --green: #22c55e;
+      --red: #ef4444;
+      --blue: #7dd3fc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(250, 204, 21, 0.18), transparent 28rem),
+        radial-gradient(circle at 88% 18%, rgba(34, 197, 94, 0.14), transparent 26rem),
+        radial-gradient(circle at 50% 100%, rgba(125, 211, 252, 0.10), transparent 32rem),
+        linear-gradient(135deg, #06111f 0%, #091827 44%, #07111f 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.12;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.09) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+
+    header {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(1.25rem, 3vw, 2.25rem);
+      background: linear-gradient(135deg, rgba(5, 12, 24, 0.98), rgba(11, 34, 57, 0.98));
+      border-bottom: 3px solid rgba(250, 204, 21, 0.8);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+    }
+
+    header::after {
+      content: "🏆";
+      position: absolute;
+      right: clamp(1rem, 6vw, 5rem);
+      top: 50%;
+      transform: translateY(-50%) rotate(-8deg);
+      font-size: clamp(4rem, 14vw, 10rem);
+      opacity: 0.08;
+      filter: blur(0.2px);
+    }
+
+    .hero {
+      position: relative;
+      max-width: 1180px;
+      margin: 0 auto;
+      z-index: 1;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .app-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 1rem;
+      box-shadow: 0 16px 34px rgba(0,0,0,0.35), 0 0 0 1px rgba(250,204,21,0.22);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.1rem, 7vw, 5.2rem);
+      line-height: 0.92;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-shadow: 0 2px 24px rgba(250, 204, 21, 0.22);
+    }
+
+    .subtitle {
+      max-width: 780px;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.22rem);
+      line-height: 1.6;
+      margin: 1rem 0 0;
+    }
+
+    nav {
+      max-width: 1180px;
+      margin: 1rem auto 0;
+      display: flex;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    a, .linkish { color: var(--blue); font-weight: 900; }
+
+    .pill-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      border-radius: 999px;
+      padding: 0.65rem 0.9rem;
+      background: rgba(250, 204, 21, 0.14);
+      border: 1px solid rgba(250, 204, 21, 0.38);
+      color: #fef3c7;
+      text-decoration: none;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+    }
+
+    .pill-link:hover { background: rgba(250, 204, 21, 0.24); transform: translateY(-1px); }
+
+    main {
+      width: min(1180px, calc(100% - 2rem));
+      margin: 1.25rem auto 2.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(18,43,75,0.96), rgba(9,22,39,0.96));
+      border: 1px solid var(--line);
+      border-radius: 1.15rem;
+      padding: clamp(1rem, 2vw, 1.35rem);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.34);
+      margin-bottom: 1rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .feature-card {
+      min-height: 100%;
+      display: grid;
+      gap: 0.4rem;
+      align-content: start;
+      border-color: rgba(250,204,21,0.20);
+    }
+
+    .icon-bubble {
+      width: 3rem;
+      height: 3rem;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 25%, rgba(254,240,138,0.42), rgba(250,204,21,0.16));
+      border: 1px solid rgba(250,204,21,0.35);
+      font-size: 1.45rem;
+    }
+
+    h2 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.45rem, 3vw, 2rem);
+      color: #f8fafc;
+    }
+
+    h3 {
+      margin: 0.7rem 0 0.45rem;
+      color: #fef3c7;
+    }
+
+    p, li { line-height: 1.62; }
+    .muted { color: var(--muted); }
+    .gold { color: #fef08a; font-weight: 900; }
+    .green { color: #bbf7d0; font-weight: 900; }
+    .red { color: #fecaca; font-weight: 900; }
+
+    ol, ul { padding-left: 1.35rem; }
+    li { margin-bottom: 0.55rem; }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding-left: 0;
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .steps li {
+      counter-increment: step;
+      position: relative;
+      padding: 0.85rem 0.95rem 0.85rem 3.2rem;
+      border: 1px solid rgba(148,163,184,0.22);
+      border-radius: 0.85rem;
+      background: rgba(2,6,23,0.34);
+      margin: 0;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0.85rem;
+      top: 0.78rem;
+      width: 1.7rem;
+      height: 1.7rem;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--orange));
+      color: #111827;
+      font-weight: 1000;
+    }
+
+    .callout {
+      border-left: 5px solid var(--gold);
+      padding: 0.85rem 1rem;
+      background: rgba(250, 204, 21, 0.10);
+      border-radius: 0.8rem;
+      margin: 1rem 0;
+    }
+
+    .callout.green { border-color: var(--green); background: rgba(34,197,94,0.10); }
+    .callout.red { border-color: var(--red); background: rgba(239,68,68,0.10); }
+
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 0.85rem;
+      border: 1px solid var(--line);
+    }
+
+    .mini-table th, .mini-table td {
+      padding: 0.8rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .mini-table th {
+      color: #fef3c7;
+      background: rgba(30,64,175,0.42);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.84rem;
+    }
+
+    .mini-table tr:last-child td { border-bottom: 0; }
+
+    footer {
+      text-align: center;
+      color: rgba(203,213,225,0.72);
+      padding: 2rem 1rem;
+    }
+
+    @media (max-width: 680px) {
+      .app-icon { width: 56px; height: 56px; }
+      nav { margin-top: 0.85rem; }
+      .pill-link { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <div class="title-row">
+        <img class="app-icon" src="apple-touch-icon.png" alt="Sports Master trophy icon">
+        <div>
+          <h1>Sports Master Help</h1>
+          <p class="subtitle">The friendly guide for installing Sports Master on your phone, playing the weekly challenge, and surviving Stop the Timer without embarrassing your thumbs.</p>
+        </div>
+      </div>
+    </div>
+    <nav aria-label="Help navigation">
+      <a class="pill-link" href="index.html">Back to Sports Master</a>
+      <a class="pill-link" href="#phone-icon">Phone icon setup</a>
+      <a class="pill-link" href="#sports-master">How Sports Master works</a>
+      <a class="pill-link" href="#stop-the-timer">Stop the Timer</a>
+      <a class="pill-link" href="#troubleshooting">Troubleshooting</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="grid" aria-label="Quick summary">
+      <article class="card feature-card">
+        <div class="icon-bubble">📱</div>
+        <h2>Install it like an app</h2>
+        <p class="muted">No app store, no drama. Add Sports Master to your phone Home Screen and it launches from a shiny trophy icon like it has a tiny sports headquarters in your pocket.</p>
+      </article>
+      <article class="card feature-card">
+        <div class="icon-bubble">🏟️</div>
+        <h2>Pick, predict, panic</h2>
+        <p class="muted">Each approved player can create one sporting event, everyone predicts before the lock, and the chosen winner scores a point. Simple. Dangerous. Perfectly office-friendly.</p>
+      </article>
+      <article class="card feature-card">
+        <div class="icon-bubble">🔴</div>
+        <h2>Stop the Timer</h2>
+        <p class="muted">One attempt. Hidden timer. Random target. Big game-show button. It is basically a carnival game wearing a spreadsheet’s tie.</p>
+      </article>
+    </section>
+
+    <section id="phone-icon" class="card">
+      <h2>Put Sports Master on your phone Home Screen</h2>
+      <p class="muted">This makes Sports Master feel like an app. It still runs as the website, but it opens from your phone’s Home Screen with the trophy icon instead of making everyone hunt through browser tabs like a lost raccoon.</p>
+
+      <div class="grid">
+        <article>
+          <h3>iPhone or iPad</h3>
+          <ol class="steps">
+            <li>Open <span class="gold">Sports Master</span> in <strong>Safari</strong>. This bit matters. iPhones are fussy little monarchs about Home Screen web apps.</li>
+            <li>Tap the <strong>Share</strong> button. It usually looks like a square with an arrow escaping from it.</li>
+            <li>Scroll through the options and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Leave the name as <strong>Sports Master</strong>, unless you want to call it something suspicious like “Definitely Work”.</li>
+            <li>Tap <strong>Add</strong>. The trophy icon should appear on your Home Screen, ready for weekly glory.</li>
+          </ol>
+        </article>
+
+        <article>
+          <h3>Android phone or tablet</h3>
+          <ol class="steps">
+            <li>Open <span class="gold">Sports Master</span> in <strong>Chrome</strong>, or your usual Android browser if it supports Home Screen shortcuts.</li>
+            <li>Tap the <strong>three-dot menu</strong>. The tiny kebab of destiny.</li>
+            <li>Tap <strong>Add to Home screen</strong>, <strong>Install app</strong>, or similar wording depending on the browser.</li>
+            <li>Confirm the name as <strong>Sports Master</strong>.</li>
+            <li>Tap <strong>Add</strong> or <strong>Install</strong>. You now have a trophy-powered launch button.</li>
+          </ol>
+        </article>
+      </div>
+
+      <div class="callout">
+        <strong>Small print, but not boring:</strong> this is a Progressive Web App (PWA), which means it is still your website, just dressed up nicely for the phone Home Screen. No App Store. No Google Play. No forms in triplicate.
+      </div>
+    </section>
+
+    <section id="sports-master" class="card">
+      <h2>How Sports Master works</h2>
+      <p class="muted">Sports Master is the weekly office sports challenge where everyone gets to be a commentator, bookmaker, statistician, and overconfident pundit all at once.</p>
+
+      <h3>1. Register and wait for approval</h3>
+      <ol class="steps">
+        <li>Register with your full name, preferred name or nickname, email address, and password.</li>
+        <li>New players start as <strong>pending approval</strong>. This stops randoms, robots, cousins, and suspiciously well-informed houseplants from joining the game.</li>
+        <li>An admin approves new players. Once approved, you can enter events, submit predictions, and play Stop the Timer.</li>
+      </ol>
+
+      <h3>2. Create your event</h3>
+      <ol class="steps">
+        <li>Each active player may create <strong>one event column per week</strong>.</li>
+        <li>The event must happen during the event window: <strong>Friday 1700 to Monday 0800 New Zealand Time</strong>.</li>
+        <li>Add the sport, event name, event link, start time, challenge description, and prediction format.</li>
+        <li>Keep the prediction format clear. “Winner’s name” is good. “Vibes” is funny, but the scoring committee will cry.</li>
+      </ol>
+
+      <h3>3. Enter predictions</h3>
+      <ol class="steps">
+        <li>Everyone submits predictions before the weekly lock.</li>
+        <li>Predictions stay hidden until the reveal, so nobody can copy the office oracle.</li>
+        <li>If an event has no tie-breaker, duplicate predictions are blocked.</li>
+        <li>If an event has a tie-breaker, shared main predictions are allowed, but the tie-breaker decides the awkward stuff.</li>
+      </ol>
+
+      <h3>4. Results and winners</h3>
+      <ol class="steps">
+        <li>After the Friday deadline, event owners can enter the actual result and select the winning prediction.</li>
+        <li>Admins can help manage results and winners if someone is away, unavailable, or trapped in a meeting called “quick sync”.</li>
+        <li>The winner of each event gets <strong>one point</strong>. Everyone else gets character development.</li>
+        <li>The leaderboard shows the selected week and total points across saved weeks.</li>
+      </ol>
+
+      <div class="callout green">
+        <strong>Late event warnings:</strong> the game shows when an event was first saved and last changed. Friday entries can be flagged as late or very late, because “here is my event with twelve minutes left” is technically legal but socially spicy.
+      </div>
+    </section>
+
+    <section id="stop-the-timer" class="card">
+      <h2>Stop the Timer instructions</h2>
+      <p class="muted">Stop the Timer is the weekly tie-breaker. It is fast, unfairly tense, and has a big red button, which automatically makes it 37% more official.</p>
+
+      <ol class="steps">
+        <li>From the main Sports Master page, press <strong>STOP THE TIMER</strong>.</li>
+        <li>The Stop the Timer page opens separately. This keeps the main game tidy and gives the tie-breaker its own dramatic little stage.</li>
+        <li>Press <strong>Start the timer</strong>. Your personal target appears, somewhere between <strong>4.000 and 10.000 seconds</strong>.</li>
+        <li>The running timer is hidden. This is where confidence leaves the building.</li>
+        <li>Press the big red <strong>Stop the Timer</strong> button when you think your target time has passed.</li>
+        <li>Your result is saved, including your target, result, difference, and audit flags.</li>
+        <li>After saving, the page performs its mission-complete self-destruct sequence. If your browser refuses to close the tab, use the return button. Some browsers are cowards.</li>
+      </ol>
+
+      <h3>Fair play and audit flags</h3>
+      <p class="muted">This is still a free static website, so it cannot be Fort Knox. But it does make casual cheating harder and more visible.</p>
+      <table class="mini-table">
+        <thead>
+          <tr><th>What gets checked</th><th>Why it matters</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Server timestamps</td><td>Firestore records start and stop timestamps so there is a basic timing trail.</td></tr>
+          <tr><td>Client timing mismatch</td><td>If the browser-reported timing and server timing look odd, the attempt can be flagged for review.</td></tr>
+          <tr><td>Page focus and visibility</td><td>If the page was hidden or lost focus during the attempt, it can be marked suspicious.</td></tr>
+          <tr><td>Perfect or very strange results</td><td>If someone lands exactly on the target or records a bizarre result, the audit column can politely raise an eyebrow.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout red">
+        <strong>Translation:</strong> play nicely. If you try to defeat the office sports game with developer tools, you may win the point but lose the moral high ground, which is worth at least two points in the pub.
+      </div>
+    </section>
+
+    <section id="troubleshooting" class="card">
+      <h2>Troubleshooting</h2>
+      <div class="grid">
+        <article>
+          <h3>The icon did not update</h3>
+          <p class="muted">Favicons are aggressively cached. Browsers hoard them like tiny digital dragons. Try a hard refresh, close and reopen the browser, or wait a little while.</p>
+        </article>
+        <article>
+          <h3>I cannot play after registering</h3>
+          <p class="muted">That is probably correct. New players need admin approval before they can enter events, predictions, or Stop the Timer.</p>
+        </article>
+        <article>
+          <h3>Stop the Timer will not close itself</h3>
+          <p class="muted">Some browsers block automatic tab closing unless the page was opened in a certain way. Use the return button and imagine the explosion happening off-screen.</p>
+        </article>
+        <article>
+          <h3>The page looks old</h3>
+          <p class="muted">Hard refresh with <strong>Ctrl + F5</strong> on Windows. On a phone, close the browser tab and reopen Sports Master from the Home Screen or browser.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Sports Master Help - may your predictions be bold and your timer thumb be weirdly accurate.
+  </footer>
+</body>
+</html>
