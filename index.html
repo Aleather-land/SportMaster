@@ -727,7 +727,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.08.11.3</span>
+          <span class="version-badge">v2026.08.11.4</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -2322,6 +2322,21 @@
       return null;
     }
 
+    function getStopTimerGameMeta(attempt) {
+      const type = attempt && attempt.gameType ? attempt.gameType : "classic";
+      const fallback = {
+        classic: { name: "Classic Stop", targetLabel: "Target", resultLabel: "Result" },
+        countdown: { name: "Countdown Stop", targetLabel: "Target remaining", resultLabel: "Remaining at stop" },
+        bounce: { name: "Bounce Stop", targetLabel: "Target point", resultLabel: "Hidden value at stop" }
+      };
+      return {
+        type,
+        name: attempt?.gameName || fallback[type]?.name || "Classic Stop",
+        targetLabel: attempt?.targetLabel || fallback[type]?.targetLabel || "Target",
+        resultLabel: attempt?.resultLabel || fallback[type]?.resultLabel || "Result"
+      };
+    }
+
     function getFlashTimerDifference(attempt) {
       if (!attempt || attempt.status !== "completed") return null;
       return Number(attempt.differenceSeconds ?? Math.abs(Number(attempt.resultSeconds || 0) - Number(attempt.targetSeconds || 0)).toFixed(3));
@@ -2334,17 +2349,35 @@
       return Number(((stopMs - startMs) / 1000).toFixed(3));
     }
 
+    function getClientElapsedSeconds(attempt) {
+      if (!attempt) return null;
+      if (typeof attempt.clientElapsedSeconds === "number") return Number(attempt.clientElapsedSeconds);
+      if (attempt.gameType === "countdown" && typeof attempt.countdownRemainingSeconds === "number") {
+        return Number(((Number(attempt.countdownStartSeconds || 10) - Number(attempt.countdownRemainingSeconds || 0))).toFixed(3));
+      }
+      if (!attempt.gameType || attempt.gameType === "classic") return Number(attempt.resultSeconds || 0);
+      return null;
+    }
+
     function getStopTimerAuditFlags(attempt) {
       if (!attempt || attempt.status !== "completed") return [];
       const flags = new Set(Array.isArray(attempt.suspicionFlags) ? attempt.suspicionFlags : []);
       const difference = getFlashTimerDifference(attempt);
       const resultSeconds = Number(attempt.resultSeconds || 0);
       const serverElapsed = getServerElapsedSeconds(attempt);
+      const clientElapsed = getClientElapsedSeconds(attempt);
       const telemetry = attempt.telemetry || {};
+      const gameType = attempt.gameType || "classic";
 
       if (difference === 0) flags.add("perfect result, review if contested");
-      if (resultSeconds < 3.5 || resultSeconds > 11.5) flags.add("result outside expected range");
-      if (serverElapsed != null && Math.abs(serverElapsed - resultSeconds) > 2) flags.add("server/client timing mismatch");
+      if (gameType === "classic" && (resultSeconds < 3.5 || resultSeconds > 11.5)) flags.add("result outside expected range");
+      if (gameType === "countdown" && (resultSeconds < 0 || resultSeconds > Number(attempt.countdownStartSeconds || 10))) flags.add("countdown result outside expected range");
+      if (gameType === "bounce") {
+        const low = Number(attempt.targetSeconds || 0) - Number(attempt.amplitudeSeconds || 2) - 0.2;
+        const high = Number(attempt.targetSeconds || 0) + Number(attempt.amplitudeSeconds || 2) + 0.2;
+        if (resultSeconds < low || resultSeconds > high) flags.add("bounce result outside expected range");
+      }
+      if (serverElapsed != null && clientElapsed != null && Math.abs(serverElapsed - clientElapsed) > 2) flags.add("server/client timing mismatch");
       if (Number(telemetry.pointerMoveCount || 0) < 1) flags.add("no pointer movement recorded");
       if (telemetry.visibilityLost === true) flags.add("page visibility changed during attempt");
       if (telemetry.focusLost === true) flags.add("page lost focus during attempt");
@@ -2356,16 +2389,17 @@
     function formatStopTimerAttemptForPlayer(playerId) {
       const attempt = getSportsmasterTieBreakAttemptForPlayer(playerId);
       if (!attempt) return "not played";
+      const meta = getStopTimerGameMeta(attempt);
 
       if (attempt.status === "started" && !attempt.resultSeconds) {
-        return `target ${Number(attempt.targetSeconds || 0).toFixed(3)}s, not completed`;
+        return `${meta.name}: ${meta.targetLabel.toLowerCase()} ${Number(attempt.targetSeconds || 0).toFixed(3)}s, not completed`;
       }
 
       const result = Number(attempt.resultSeconds || 0).toFixed(3);
       const target = Number(attempt.targetSeconds || 0);
       const difference = getFlashTimerDifference(attempt);
       const flags = getStopTimerAuditFlags(attempt);
-      return `target ${target.toFixed(3)}s, result ${result}s, diff ${Number(difference || 0).toFixed(3)}s${flags.length ? " [review]" : ""}`;
+      return `${meta.name}: ${meta.targetLabel.toLowerCase()} ${target.toFixed(3)}s, ${meta.resultLabel.toLowerCase()} ${result}s, diff ${Number(difference || 0).toFixed(3)}s${flags.length ? " [review]" : ""}`;
     }
 
     function getMySportsmasterTieBreakAttempt() {
@@ -2405,8 +2439,8 @@
       );
 
       els.miniGameTarget.textContent = myAttempt
-        ? `Your target: ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds`
-        : "Press STOP THE TIMER to reveal your personal target";
+        ? `${getStopTimerGameMeta(myAttempt).name}: ${getStopTimerGameMeta(myAttempt).targetLabel} ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds`
+        : "Press STOP THE TIMER to reveal your random challenge";
 
       els.miniGameStatus.textContent = myAttempt
         ? myAttempt.status === "completed" ? "Played" : "Started"
@@ -2422,14 +2456,14 @@
           const flags = getStopTimerAuditFlags(myAttempt);
           showMessage(
             els.miniGameMessage,
-            `Your result: target ${Number(myAttempt.targetSeconds || 0).toFixed(3)} seconds, result ${Number(myAttempt.resultSeconds || 0).toFixed(3)} seconds, difference ${Number(getFlashTimerDifference(myAttempt) || 0).toFixed(3)} seconds.${flags.length ? " Review flag: " + flags.join("; ") : ""}`,
+            `Your result: ${getStopTimerGameMeta(myAttempt).name}. Target ${Number(myAttempt.targetSeconds || 0).toFixed(3)}s, result ${Number(myAttempt.resultSeconds || 0).toFixed(3)}s, difference ${Number(getFlashTimerDifference(myAttempt) || 0).toFixed(3)}s.${flags.length ? " Review flag: " + flags.join("; ") : ""}`,
             flags.length ? "error" : "success"
           );
         } else {
           showMessage(els.miniGameMessage, "You started this Stop the Timer attempt but did not complete it. Ask Adam to reset the attempt if this was a mistake.", "error");
         }
       } else {
-        showMessage(els.miniGameMessage, "Press STOP THE TIMER to play your personal random target between 4.000 and 10.000 seconds.", "");
+        showMessage(els.miniGameMessage, "Press STOP THE TIMER to play one randomly selected challenge: Classic Stop, Countdown Stop, or Bounce Stop.", "");
       }
 
       if (ordered.length === 0) {
@@ -2443,6 +2477,7 @@
             <thead>
               <tr>
                 <th>Player</th>
+                <th>Game</th>
                 <th>Target</th>
                 <th>Result</th>
                 <th>Difference</th>
@@ -2457,6 +2492,7 @@
                 return `
                   <tr>
                     <td>${escapeHtml(attempt.playerNickname || getPlayerName(attempt.playerId))}</td>
+                    <td>${escapeHtml(getStopTimerGameMeta(attempt).name)}</td>
                     <td>${Number(attempt.targetSeconds || 0).toFixed(3)}s</td>
                     <td>${completed ? `${Number(attempt.resultSeconds || 0).toFixed(3)}s` : "Started"}</td>
                     <td>${completed ? `${Number(getFlashTimerDifference(attempt) || 0).toFixed(3)}s` : "Not completed"}</td>
