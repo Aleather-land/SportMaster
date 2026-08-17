@@ -727,7 +727,7 @@
       <div>
         <div class="app-title-row">
           <h1>Sports Master</h1>
-          <span class="version-badge">v2026.08.11.4</span>
+          <span class="version-badge">v2026.08.14.1</span>
         </div>
         <div id="weekSummary">Loading...</div>
       </div>
@@ -865,9 +865,8 @@
             <select id="tieBreakType">
               <option value="none">None</option>
               <option value="text">Tie-breaker</option>
-              <option value="numeric">Stop the Timer</option>
             </select>
-            <span class="format-hint">Use this when the main prediction may not produce a clear winner. Text tie-breakers use a separate tie-break answer. Stop the Timer gives each player a random target between 4.000 and 10.000 seconds when they press Start.</span>
+            <span class="format-hint">Use this when the main prediction may not produce a clear winner. Event tie-breakers now use a separate tie-break answer. Stop the Timer is reserved for the overall weekly tie-breaker.</span>
           </label>
 
           <div id="tieBreakDetails" class="grid hidden">
@@ -931,11 +930,12 @@
       </div>
 
       <div class="mini-game-panel">
-        <div id="miniGameTarget" class="mini-game-target">Press STOP THE TIMER to open the challenge</div>
-        <div class="muted">STOP THE TIMER... Each player gets one attempt for the selected week. Your target is randomly chosen to the nearest millisecond when you start the challenge, then the timer is hidden. Press the big Stop the Timer button when you think your target time has passed.</div>
+        <div id="miniGameTarget" class="mini-game-target">Press STOP THE TIMER to open the official weekly tie-breaker</div>
+        <div class="muted">STOP THE TIMER is now used only for the overall weekly tie-breaker. Each player gets one official attempt for the selected week, but you can also open practice mode just for fun.</div>
         <input id="miniGamePickInput" type="hidden" />
-        <div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
           <button id="miniGameStartButton" type="button">STOP THE TIMER</button>
+          <button id="miniGamePracticeButton" type="button" class="secondary">Practice mode</button>
         </div>
         <div id="miniGameMessage" class="mini-game-result"></div>
         <div id="miniGameLeaderboard"></div>
@@ -1093,6 +1093,7 @@
       miniGameTarget: document.querySelector("#miniGameTarget"),
       miniGamePickInput: document.querySelector("#miniGamePickInput"),
       miniGameStartButton: document.querySelector("#miniGameStartButton"),
+      miniGamePracticeButton: document.querySelector("#miniGamePracticeButton"),
       miniGameStopButton: document.querySelector("#miniGameStopButton"),
       miniGameMessage: document.querySelector("#miniGameMessage"),
       miniGameLeaderboard: document.querySelector("#miniGameLeaderboard"),
@@ -1411,6 +1412,22 @@
     function collectSportsmasterTieBreakAttempts() {
       // Stop the Timer attempts are now loaded from weeks/{weekId}/timerAttempts.
       // The old players/{uid}.sportsmasterTieBreakAttempts field is intentionally ignored.
+    }
+
+    function ensureLegacyStopTimerTieBreakOption(event) {
+      if (!els.tieBreakType) return;
+      const existingLegacyOption = els.tieBreakType.querySelector('option[value="numeric"]');
+      if (event && event.tieBreakType === "numeric") {
+        if (!existingLegacyOption) {
+          const option = document.createElement("option");
+          option.value = "numeric";
+          option.textContent = "Stop the Timer (existing event only)";
+          els.tieBreakType.appendChild(option);
+        }
+        return;
+      }
+
+      if (existingLegacyOption) existingLegacyOption.remove();
     }
 
     function toggleTieBreakDetails() {
@@ -1916,6 +1933,7 @@
       if (eventFormLoadedKey === formKey) return;
 
       if (!myEvent) {
+        ensureLegacyStopTimerTieBreakOption(null);
         els.eventForm.reset();
         els.tieBreakType.value = "none";
         toggleTieBreakDetails();
@@ -1931,6 +1949,7 @@
       els.eventStartAt.value = myEvent.eventStartAt || "";
       els.challengeDescription.value = myEvent.challengeDescription || "";
       els.predictionFormat.value = myEvent.predictionFormat || "";
+      ensureLegacyStopTimerTieBreakOption(myEvent);
       els.tieBreakType.value = myEvent.tieBreakType || "none";
       els.tieBreakQuestion.value = myEvent.tieBreakQuestion || "";
       els.tieBreakFormat.value = myEvent.tieBreakFormat || "";
@@ -2068,7 +2087,7 @@
         return `
           <td>
             <strong>Stop the Timer</strong><br />
-            <span class="format-hint">Uses each player's Sports Master Stop the Timer result for this week. No separate tie-break answer is required.</span>
+            <span class="format-hint">Legacy event tie-break. Stop the Timer is now reserved for the overall weekly tie-breaker, but this existing event is still shown for backwards compatibility.</span>
           </td>
         `;
       }
@@ -2130,7 +2149,7 @@
       const tieBreakText = eventUsesTextTieBreak(event) && prediction.tieBreakAnswer
         ? `<span class="format-hint">Tie-break: ${escapeHtml(prediction.tieBreakAnswer)}</span>`
         : eventUsesStopTimerTieBreak(event)
-          ? `<span class="format-hint">Stop the Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}</span>`
+          ? `<span class="format-hint">Legacy Stop the Timer: ${escapeHtml(formatStopTimerAttemptForPlayer(prediction.playerId))}</span>`
           : "";
       return `${escapeHtml(prediction.prediction || "")}${tieBreakText}`;
     }
@@ -2185,7 +2204,7 @@
               />
               <span class="format-hint">Tie-break: ${escapeHtml(event.tieBreakQuestion || "")}${event.tieBreakFormat ? ` Format: ${escapeHtml(event.tieBreakFormat)}` : ""}</span>
             ` : usesStopTimerTieBreak ? `
-              <span class="format-hint">Tie-break: Stop the Timer. Your weekly Stop the Timer attempt will be used, so no extra tie-break answer is needed.</span>
+              <span class="format-hint">Tie-break: legacy Stop the Timer event. Your weekly Stop the Timer attempt will be used, so no extra tie-break answer is needed.</span>
             ` : ""}
             <button
               class="small save-prediction-button"
@@ -2425,6 +2444,19 @@
       showMessage(els.miniGameMessage, "Stop the Timer opened in a new tab. Return here after playing and the leaderboard will update automatically.", "success");
     }
 
+    function startPracticeMiniGame() {
+      if (!currentUser || !currentPlayer || !selectedWeekId) return;
+
+      const url = `stop-the-timer.html?weekId=${encodeURIComponent(selectedWeekId)}&practice=1`;
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        showMessage(els.miniGameMessage, `Pop-up blocked. Open ${url} manually from the same folder as index.html.`, "error");
+        return;
+      }
+
+      showMessage(els.miniGameMessage, "Practice mode opened in a new tab. It is just for fun and will not affect the leaderboard.", "success");
+    }
+
     async function stopMiniGame() {
       // Stop the Timer now runs in stop-the-timer.html.
     }
@@ -2463,7 +2495,7 @@
           showMessage(els.miniGameMessage, "You started this Stop the Timer attempt but did not complete it. Ask Adam to reset the attempt if this was a mistake.", "error");
         }
       } else {
-        showMessage(els.miniGameMessage, "Press STOP THE TIMER to play one randomly selected challenge: Classic Stop, Countdown Stop, or Bounce Stop.", "");
+        showMessage(els.miniGameMessage, "Press STOP THE TIMER to play one official challenge: Classic Stop, Countdown Stop, or Bounce Stop. Practice mode is unlimited and does not save a score.", "");
       }
 
       if (ordered.length === 0) {
@@ -2819,6 +2851,7 @@
     });
 
     els.miniGameStartButton.addEventListener("click", startMiniGame);
+    if (els.miniGamePracticeButton) els.miniGamePracticeButton.addEventListener("click", startPracticeMiniGame);
     if (els.miniGameStopButton) els.miniGameStopButton.addEventListener("click", stopMiniGame);
 
     window.addEventListener("keydown", event => {

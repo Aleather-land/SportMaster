@@ -291,8 +291,8 @@
 
   <main>
     <section class="card">
-      <h2>Your one attempt</h2>
-      <p class="muted">
+      <h2 id="attemptTitle">Your one attempt</h2>
+      <p id="attemptIntro" class="muted">
         Press Start to reveal which Stop the Timer challenge you have been given. It could be Classic Stop, Countdown Stop, or Bounce Stop. Same aim, different flavour, fewer easy scripts.
       </p>
       <span id="statusBadge" class="status">Loading</span>
@@ -353,7 +353,8 @@
 
     const params = new URLSearchParams(window.location.search);
     const weekId = params.get("weekId") || "";
-    const CHALLENGE_VERSION = "free-static-v2026.08.11.1";
+    const practiceMode = params.get("practice") === "1";
+    const CHALLENGE_VERSION = "free-static-v2026.08.14.1";
     const COUNTDOWN_START_SECONDS = 10;
 
     const GAME_TYPES = {
@@ -395,6 +396,8 @@
 
     const els = {
       headerSummary: document.querySelector("#headerSummary"),
+      attemptTitle: document.querySelector("#attemptTitle"),
+      attemptIntro: document.querySelector("#attemptIntro"),
       statusBadge: document.querySelector("#statusBadge"),
       challengeName: document.querySelector("#challengeName"),
       target: document.querySelector("#target"),
@@ -446,6 +449,7 @@
 
     function timestampMillis(value) {
       if (!value) return null;
+      if (value instanceof Date) return value.getTime();
       if (typeof value.toMillis === "function") return value.toMillis();
       if (typeof value.seconds === "number") return (value.seconds * 1000) + Math.floor((value.nanoseconds || 0) / 1000000);
       return null;
@@ -531,6 +535,21 @@
       els.bouncePanel.classList.toggle("visible", attempt.gameType === "bounce");
     }
 
+    function renderReadyState() {
+      currentAttempt = null;
+      running = false;
+      localStartPerformance = null;
+      stopBounceIndicators();
+      els.challengeName.textContent = "";
+      els.challengeName.classList.add("hidden");
+      els.challengeInstructions.textContent = "Your challenge, target, and exact rules will be revealed only after you press Start.";
+      els.target.textContent = "Challenge hidden until Start";
+      els.bouncePanel.classList.remove("visible");
+      els.arenaCard.classList.add("hidden");
+      els.resultCard.classList.add("hidden");
+      els.stopButton.disabled = true;
+    }
+
     function collectSuspicionFlags(resultSeconds, differenceSeconds, event, clientElapsedSeconds) {
       const flags = [];
       const gameType = currentAttempt?.gameType || "classic";
@@ -559,7 +578,7 @@
       const serverElapsed = startedMs && stoppedMs ? Number(((stoppedMs - startedMs) / 1000).toFixed(3)) : null;
       const flags = Array.isArray(attempt.suspicionFlags) ? attempt.suspicionFlags : [];
 
-      setStatus(flags.length ? "Review" : "Completed", "status");
+      setStatus(practiceMode ? "Practice complete" : (flags.length ? "Review" : "Completed"), "status");
       showChallenge(attempt);
       els.startButton.disabled = true;
       els.arenaCard.classList.add("hidden");
@@ -573,10 +592,15 @@
           <div class="result-box">Server elapsed<strong>${serverElapsed == null ? "Pending" : `${serverElapsed.toFixed(3)}s`}</strong></div>
         </div>
         ${flags.length ? `<p class="warn">Review flags: ${flags.map(escapeHtml).join("; ")}</p>` : `<p class="success">No obvious review flags from this page.</p>`}
-        <div id="selfDestruct" class="self-destruct">Mission complete. This tab will self-destruct shortly...</div>
+        ${practiceMode ? `<p class="success">Practice mode only. This result was not saved and does not affect the official leaderboard.</p>` : `<div id="selfDestruct" class="self-destruct">Mission complete. This tab will self-destruct shortly...</div>`}
       `;
-      showMessage("This attempt has been saved. You can close this tab and return to Sports Master.", flags.length ? "warn" : "success");
-      startSelfDestruct();
+      if (practiceMode) {
+        els.startButton.disabled = false;
+        showMessage("Practice complete. Have another go, or return to Sports Master when your thumb has recovered.", flags.length ? "warn" : "success");
+      } else {
+        showMessage("This attempt has been saved. You can close this tab and return to Sports Master.", flags.length ? "warn" : "success");
+        startSelfDestruct();
+      }
     }
 
     function renderStartedAttempt(attempt) {
@@ -596,14 +620,17 @@
     }
 
     async function startAttempt() {
-      if (!currentUser || !currentPlayer || !attemptRef) return;
+      if (!currentUser || !currentPlayer) return;
+      if (!practiceMode && !attemptRef) return;
 
       const attempt = makeAttemptForGame(chooseGameType());
 
       try {
         els.startButton.disabled = true;
-        await setDoc(attemptRef, attempt);
-        currentAttempt = { ...attempt, startedAt: null, createdAt: null };
+        if (!practiceMode) {
+          await setDoc(attemptRef, attempt);
+        }
+        currentAttempt = { ...attempt, startedAt: practiceMode ? new Date() : null, createdAt: practiceMode ? new Date() : null };
         localStartPerformance = performance.now();
         running = true;
         pointerMoveCount = 0;
@@ -618,9 +645,11 @@
         els.arenaCard.classList.remove("hidden");
         els.stopButton.disabled = false;
         if (currentAttempt.gameType === "bounce") startBounceIndicators();
-        showMessage("Timer running. The display is hidden. Hit the big Stop the Timer button at the right moment.", "muted");
+        window.setTimeout(() => els.arenaCard.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+        showMessage("Timer running. The display is hidden. Hit the big red Stop the Timer button at the right moment.", "muted");
       } catch (error) {
-        showMessage(error.message, "error");
+        renderReadyState();
+        showMessage(`Could not start the timer: ${error.message}. If this says permission-denied, publish the updated Firestore rules.`, "error");
         els.startButton.disabled = false;
       }
     }
@@ -654,7 +683,8 @@
     }
 
     async function finishAttempt(event) {
-      if (!running || !localStartPerformance || !attemptRef || !currentAttempt) return;
+      if (!running || !localStartPerformance || !currentAttempt) return;
+      if (!practiceMode && !attemptRef) return;
 
       running = false;
       els.stopButton.disabled = true;
@@ -663,6 +693,35 @@
       const clientElapsedSeconds = round3((performance.now() - localStartPerformance) / 1000);
       const result = calculateResult(clientElapsedSeconds, currentAttempt);
       const suspicionFlags = collectSuspicionFlags(result.resultSeconds, result.differenceSeconds, event, clientElapsedSeconds);
+
+      if (practiceMode) {
+        currentAttempt = {
+          ...currentAttempt,
+          status: "completed",
+          resultSeconds: result.resultSeconds,
+          differenceSeconds: result.differenceSeconds,
+          stoppedAt: new Date(),
+          updatedAt: new Date(),
+          clientStopEpochMs: Date.now(),
+          clientElapsedSeconds: result.clientElapsedSeconds,
+          countdownRemainingSeconds: result.countdownRemainingSeconds ?? null,
+          bounceValueAtStop: result.bounceValueAtStop ?? null,
+          telemetry: {
+            pointerMoveCount,
+            pointerPathPx: Number(pointerPathPx.toFixed(1)),
+            visibilityLost,
+            focusLost,
+            stopEventTrusted: event ? event.isTrusted === true : false,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            bounceLowFlashCount: Number(els.lowBounceIndicator.dataset.flashCount || 0),
+            bounceHighFlashCount: Number(els.highBounceIndicator.dataset.flashCount || 0)
+          },
+          suspicionFlags
+        };
+        renderCompletedAttempt(currentAttempt);
+        return;
+      }
 
       try {
         await updateDoc(attemptRef, {
@@ -798,14 +857,28 @@
         return;
       }
 
+      if (practiceMode) {
+        attemptRef = null;
+        els.attemptTitle.textContent = "Practice mode";
+        els.attemptIntro.textContent = "Practice mode is just for fun. You can play as many times as you like and nothing is saved to the official leaderboard.";
+        els.headerSummary.textContent = `Practice mode. Player: ${currentPlayer.nickname || currentPlayer.fullName || "Player"}.`;
+        renderReadyState();
+        setStatus("Practice", "status");
+        els.startButton.textContent = "Start practice";
+        els.startButton.disabled = false;
+        showMessage("Ready for a practice run. No scores will be saved, no glory will be awarded, and no office bragging rights should legally be claimed.", "muted");
+        return;
+      }
+
       attemptRef = doc(db, "weeks", weekId, "timerAttempts", user.uid);
       els.headerSummary.textContent = `Week ${weekId}. Player: ${currentPlayer.nickname || currentPlayer.fullName || "Player"}.`;
 
       onSnapshot(attemptRef, snap => {
         if (!snap.exists()) {
+          renderReadyState();
           setStatus("Ready", "status");
           els.startButton.disabled = false;
-          showMessage("Ready. Press Start once you are prepared. You only get one attempt.", "muted");
+          showMessage("Ready. Press Start once you are prepared. You only get one official attempt.", "muted");
           return;
         }
 
