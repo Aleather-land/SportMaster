@@ -118,6 +118,44 @@
       letter-spacing: 0.06em;
     }
 
+    .game-hmi {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(250, 204, 21, 0.5);
+      background: rgba(250, 204, 21, 0.14);
+      color: #fef08a;
+      font-size: 1.25rem;
+      font-weight: 1000;
+      line-height: 1;
+      box-shadow: 0 0 18px rgba(250, 204, 21, 0.12);
+    }
+
+    .stop-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .arena-game-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 197, 94, 0.34);
+      background: rgba(34, 197, 94, 0.12);
+      color: #bbf7d0;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
     .challenge-instructions {
       margin-top: 0.8rem;
       line-height: 1.5;
@@ -304,7 +342,10 @@
     </section>
 
     <section id="arenaCard" class="card hidden">
-      <h2>Stop the Timer</h2>
+      <div class="stop-title-row">
+        <h2>Stop the Timer</h2>
+        <div id="arenaGameTitle" class="arena-game-title hidden"></div>
+      </div>
       <p id="arenaInstructions" class="muted">The timer display is hidden. Hit the game-show button at the right moment.</p>
       <div id="bouncePanel" class="bounce-panel">
         <div id="lowBounceIndicator" class="bounce-indicator">Low end<br />bounce</div>
@@ -337,6 +378,10 @@
       onSnapshot,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+    
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
 
     const firebaseConfig = {
       apiKey: "AIzaSyAawyNX4CCAe_IsU4ZJTar2npxFyqwHFrE",
@@ -354,10 +399,10 @@
     const params = new URLSearchParams(window.location.search);
     const weekId = params.get("weekId") || "";
     const practiceMode = params.get("practice") === "1";
-    const CHALLENGE_VERSION = "free-static-v2026.08.17.1";
+    const CHALLENGE_VERSION = "free-static-v2026.08.17.2";
     const COUNTDOWN_START_SECONDS = 10;
-    const BOUNCE_AMPLITUDE_SECONDS = 2;
-    const BOUNCE_PERIOD_SECONDS = 4;
+    const BOUNCE_AMPLITUDE_SECONDS = 2.77;
+    const BOUNCE_PERIOD_SECONDS = 5.54;
     const BOUNCE_PHASE_OFFSET_SECONDS = 0;
 
     const GAME_TYPES = {
@@ -377,7 +422,7 @@
         name: "Bounce Stop",
         targetLabel: "Target point",
         resultLabel: "Hidden value at stop",
-        instructions: "A hidden value bounces around your target in a predictable rhythm. It starts at the low end, reaches the high end 2 seconds later, then returns to the low end every 4 seconds. The end indicators flash each time it bounces. Hit STOP when you think the hidden value is back at the target."
+        instructions: "A hidden value bounces around your target in a predictable rhythm. It starts at the low end, reaches the high end, then returns to the low end. The end indicators flash each time it bounces. Hit STOP when you think the hidden value is back at the target."
       }
     };
 
@@ -408,6 +453,7 @@
       startButton: document.querySelector("#startButton"),
       message: document.querySelector("#message"),
       arenaCard: document.querySelector("#arenaCard"),
+      arenaGameTitle: document.querySelector("#arenaGameTitle"),
       arenaInstructions: document.querySelector("#arenaInstructions"),
       bouncePanel: document.querySelector("#bouncePanel"),
       lowBounceIndicator: document.querySelector("#lowBounceIndicator"),
@@ -464,6 +510,12 @@
 
     function getGameMeta(attempt) {
       return GAME_TYPES[attempt?.gameType] || GAME_TYPES.classic;
+    }
+
+    function getGameHmiIcon(gameType) {
+      if (gameType === "countdown") return "↓";
+      if (gameType === "bounce") return "↔";
+      return "↑";
     }
 
     function makeAttemptForGame(gameType) {
@@ -530,8 +582,11 @@
 
     function showChallenge(attempt) {
       const meta = getGameMeta(attempt);
-      els.challengeName.textContent = meta.name;
+      const icon = getGameHmiIcon(attempt.gameType);
+      els.challengeName.innerHTML = `<span class="game-hmi" aria-hidden="true">${icon}</span><span>${escapeHtml(meta.name)}</span>`;
       els.challengeName.classList.remove("hidden");
+      els.arenaGameTitle.innerHTML = `<span class="game-hmi" aria-hidden="true">${icon}</span><span>${escapeHtml(meta.name)}</span>`;
+      els.arenaGameTitle.classList.remove("hidden");
       els.challengeInstructions.textContent = meta.instructions;
       els.target.textContent = `${meta.targetLabel}: ${Number(attempt.targetSeconds || 0).toFixed(3)}s`;
       els.arenaInstructions.textContent = meta.instructions;
@@ -554,6 +609,8 @@
       stopBounceIndicators();
       els.challengeName.textContent = "";
       els.challengeName.classList.add("hidden");
+      els.arenaGameTitle.textContent = "";
+      els.arenaGameTitle.classList.add("hidden");
       els.challengeInstructions.textContent = "Your challenge, target, and exact rules will be revealed only after you press Start.";
       els.target.textContent = "Challenge hidden until Start";
       els.bouncePanel.classList.remove("visible");
@@ -606,10 +663,21 @@
           <div class="result-box">Server elapsed<strong>${serverElapsed == null ? "Pending" : `${serverElapsed.toFixed(3)}s`}</strong></div>
         </div>
         ${flags.length ? `<p class="warn">Review flags: ${flags.map(escapeHtml).join("; ")}</p>` : `<p class="success">No obvious review flags from this page.</p>`}
-        ${practiceMode ? `<p class="success">Practice mode only. This result was not saved and does not affect the official leaderboard.</p>` : `<div id="selfDestruct" class="self-destruct">Mission complete. This tab will self-destruct shortly...</div>`}
+        ${practiceMode ? `<p class="success">Practice mode only. This result was not saved and does not affect the official leaderboard.</p><button id="tryAgainButton" type="button">Try another practice</button>` : `<div id="selfDestruct" class="self-destruct">Mission complete. This tab will self-destruct shortly...</div>`}
       `;
       if (practiceMode) {
         els.startButton.disabled = false;
+        const tryAgainButton = document.querySelector("#tryAgainButton");
+        if (tryAgainButton) {
+          tryAgainButton.addEventListener("click", () => {
+            renderReadyState();
+            setStatus("Practice", "status");
+            els.startButton.textContent = "Start practice";
+            els.startButton.disabled = false;
+            showMessage("Ready for another practice run. Aim steady, hero.", "muted");
+            window.setTimeout(() => els.startButton.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+          });
+        }
         showMessage("Practice complete. Have another go, or return to Sports Master when your thumb has recovered.", flags.length ? "warn" : "success");
       } else {
         showMessage("This attempt has been saved. You can close this tab and return to Sports Master.", flags.length ? "warn" : "success");
@@ -837,6 +905,14 @@
 
     els.startButton.addEventListener("click", startAttempt);
     els.stopButton.addEventListener("click", finishAttempt);
+
+    window.addEventListener("load", () => {
+      window.setTimeout(() => {
+        if (practiceMode) {
+          els.startButton.scrollIntoView({ behavior: "instant", block: "center" });
+        }
+      }, 100);
+    });
 
     onAuthStateChanged(auth, async user => {
       currentUser = user;
