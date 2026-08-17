@@ -354,8 +354,11 @@
     const params = new URLSearchParams(window.location.search);
     const weekId = params.get("weekId") || "";
     const practiceMode = params.get("practice") === "1";
-    const CHALLENGE_VERSION = "free-static-v2026.08.14.1";
+    const CHALLENGE_VERSION = "free-static-v2026.08.17.1";
     const COUNTDOWN_START_SECONDS = 10;
+    const BOUNCE_AMPLITUDE_SECONDS = 2;
+    const BOUNCE_PERIOD_SECONDS = 4;
+    const BOUNCE_PHASE_OFFSET_SECONDS = 0;
 
     const GAME_TYPES = {
       classic: {
@@ -374,7 +377,7 @@
         name: "Bounce Stop",
         targetLabel: "Target point",
         resultLabel: "Hidden value at stop",
-        instructions: "A hidden value bounces between a low end and high end around your target. The end indicators flash each time it bounces. Hit STOP when you think the hidden value is closest to the target."
+        instructions: "A hidden value bounces around your target in a predictable rhythm. It starts at the low end, reaches the high end 2 seconds later, then returns to the low end every 4 seconds. The end indicators flash each time it bounces. Hit STOP when you think the hidden value is back at the target."
       }
     };
 
@@ -494,9 +497,9 @@
         return {
           ...common,
           targetSeconds: randomSeconds(3, 7),
-          amplitudeSeconds: randomSeconds(2, 2.75),
-          periodSeconds: randomSeconds(1.6, 2.8),
-          phaseOffsetSeconds: randomSeconds(0, 2.8)
+          amplitudeSeconds: BOUNCE_AMPLITUDE_SECONDS,
+          periodSeconds: BOUNCE_PERIOD_SECONDS,
+          phaseOffsetSeconds: BOUNCE_PHASE_OFFSET_SECONDS
         };
       }
 
@@ -533,6 +536,15 @@
       els.target.textContent = `${meta.targetLabel}: ${Number(attempt.targetSeconds || 0).toFixed(3)}s`;
       els.arenaInstructions.textContent = meta.instructions;
       els.bouncePanel.classList.toggle("visible", attempt.gameType === "bounce");
+
+      if (attempt.gameType === "bounce") {
+        const target = Number(attempt.targetSeconds || 0);
+        const amplitude = Number(attempt.amplitudeSeconds || BOUNCE_AMPLITUDE_SECONDS);
+        const low = target - amplitude;
+        const high = target + amplitude;
+        els.lowBounceIndicator.innerHTML = `Low end<br />${low.toFixed(3)}s`;
+        els.highBounceIndicator.innerHTML = `High end<br />${high.toFixed(3)}s`;
+      }
     }
 
     function renderReadyState() {
@@ -545,6 +557,8 @@
       els.challengeInstructions.textContent = "Your challenge, target, and exact rules will be revealed only after you press Start.";
       els.target.textContent = "Challenge hidden until Start";
       els.bouncePanel.classList.remove("visible");
+      els.lowBounceIndicator.innerHTML = "Low end<br />bounce";
+      els.highBounceIndicator.innerHTML = "High end<br />bounce";
       els.arenaCard.classList.add("hidden");
       els.resultCard.classList.add("hidden");
       els.stopButton.disabled = true;
